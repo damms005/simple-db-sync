@@ -1,49 +1,37 @@
-interface Row {
-	column: string
-	value: any
-}
+import { SyncResult, Row, SyncPayload } from "../types"
 
-interface SyncResult {
-	rowsToAddToRight: Row[]
-	rowsToDeleteFromRight: Row[]
-	rowsToDeleteFromLeft: Row[]
-	rowsToUpdateOnRight: Row[]
-	rowsToUpdateOnLeft: Row[]
-	rowsToAddToLeft: Row[]
-}
-
-export function BiDirectionalSync(
-	leftTable: any,
-	rightTable: any,
-	primaryKeyColumnLeftTable: string,
-	lastCreatedAtColumnLeftTable: string,
-	lastUpdatedAtColumnLeftTable: string,
-	lastDeletedAtColumnLeftTable: string,
-	columnsToUniquelySelectRowsLeftTable: string[],
-	leftTableWhereClause: Record<string, any>,
-	leftColumnsMapToRightColumn: Record<string, string>,
-): SyncResult {
+export function BiDirectionalSync({
+	leftTable,
+	rightTable,
+	primaryKeyColumnLeftTable,
+	createdAtColumnLeftTable,
+	updatedAtColumnLeftTable,
+	deletedAtColumnLeftTable,
+	otherColumnsInLeftTable,
+	leftTableWhereClause,
+	leftColumnsMapToRightColumn }: SyncPayload): SyncResult {
 	const columnsToSelectFromLeftTable = [
 		primaryKeyColumnLeftTable,
-		...columnsToUniquelySelectRowsLeftTable,
-		lastCreatedAtColumnLeftTable,
-		lastUpdatedAtColumnLeftTable,
-		lastDeletedAtColumnLeftTable,
+		...otherColumnsInLeftTable,
+		createdAtColumnLeftTable,
+		updatedAtColumnLeftTable,
+		deletedAtColumnLeftTable,
 	]
 
 	const columnsToSelectFromRightTable = [
 		getRightTableColumnEquivalence(primaryKeyColumnLeftTable, leftColumnsMapToRightColumn),
-		...columnsToUniquelySelectRowsLeftTable.map(column => getRightTableColumnEquivalence(column, leftColumnsMapToRightColumn)),
-		getRightTableColumnEquivalence(lastCreatedAtColumnLeftTable, leftColumnsMapToRightColumn),
-		getRightTableColumnEquivalence(lastUpdatedAtColumnLeftTable, leftColumnsMapToRightColumn),
-		getRightTableColumnEquivalence(lastDeletedAtColumnLeftTable, leftColumnsMapToRightColumn),
+		...otherColumnsInLeftTable.map(column => getRightTableColumnEquivalence(column, leftColumnsMapToRightColumn)),
+		getRightTableColumnEquivalence(createdAtColumnLeftTable, leftColumnsMapToRightColumn),
+		getRightTableColumnEquivalence(updatedAtColumnLeftTable, leftColumnsMapToRightColumn),
+		getRightTableColumnEquivalence(deletedAtColumnLeftTable, leftColumnsMapToRightColumn),
 	]
 
-	const rightTableWhereClause: Record<string, string> = Object.keys(leftTableWhereClause).reduce((accumulator, key) => {
-		accumulator[getRightTableColumnEquivalence(key, leftColumnsMapToRightColumn)] = leftTableWhereClause[key]
-		return accumulator
-	}
-		, {})
+	const rightTableWhereClause: Record<string, string> | undefined = leftTableWhereClause
+		? Object.keys(leftTableWhereClause).reduce((accumulator, key) => {
+			accumulator[getRightTableColumnEquivalence(key, leftColumnsMapToRightColumn)] = leftTableWhereClause[key]
+			return accumulator
+		}, {} as Record<string, string>)
+		: undefined
 
 	const leftTableRows: Row[] = leftTable.selectRows(columnsToSelectFromLeftTable, leftTableWhereClause)
 	const rightTableRows: Row[] = rightTable.selectRows(columnsToSelectFromRightTable, rightTableWhereClause)
@@ -55,11 +43,24 @@ export function BiDirectionalSync(
 	const rowsToUpdateOnLeft: Row[] = []
 	const rowsToAddToLeft: Row[] = []
 
-	leftTableRows.forEach(leftTableRow => {
+	const columnsNotToUseForComparison = [
+		primaryKeyColumnLeftTable,
+		createdAtColumnLeftTable,
+		updatedAtColumnLeftTable,
+		deletedAtColumnLeftTable,
+	]
 
-		const rightTableRow = rightTableRows.find(rightTableRow => {
-			return columnsToUniquelySelectRowsLeftTable.every(column => {
-				return leftTableRow[column] === rightTableRow[getRightTableColumnEquivalence(column, leftColumnsMapToRightColumn)]
+	leftTableRows.forEach((leftTableRow: Row) => {
+
+		const rightTableRow: Row | undefined = rightTableRows.find(rightTableRow => {
+			return otherColumnsInLeftTable.every(column => {
+				if (columnsNotToUseForComparison.includes(column)) {
+					return true
+				}
+
+				const leftValue = leftTableRow[column]
+				const rightValue = rightTableRow[getRightTableColumnEquivalence(column, leftColumnsMapToRightColumn)]
+				return leftValue === rightValue
 			})
 		})
 
@@ -69,34 +70,37 @@ export function BiDirectionalSync(
 
 		// If the row was deleted on the left table, and the right table row is not deleted, and the
 		// right table row was not updated after the left table row was deleted, delete the right table row.
-		const leftTableRowWasDeleted = leftTableRow[lastDeletedAtColumnLeftTable]
-		const rightTableRowWasNotDeleted = !rightTableRow[lastDeletedAtColumnLeftTable]
-		const rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted = rightTableRow[lastUpdatedAtColumnLeftTable] < leftTableRow[lastDeletedAtColumnLeftTable]
+		const leftTableRowWasDeleted = leftTableRow[deletedAtColumnLeftTable]
+		const rightTableRowWasNotDeleted = !rightTableRow[deletedAtColumnLeftTable]
+		const rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted = rightTableRow[updatedAtColumnLeftTable] < leftTableRow[deletedAtColumnLeftTable]
 		if (leftTableRowWasDeleted && rightTableRowWasNotDeleted && rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted) {
-			return rowsToDeleteFromRight.push(rightTableRow)
+			const primaryKeyColumnRightTable = getRightTableColumnEquivalence(primaryKeyColumnLeftTable, leftColumnsMapToRightColumn)
+			const rowWithIdColumnOnly = { [primaryKeyColumnRightTable]: rightTableRow[primaryKeyColumnRightTable] }
+			return rowsToDeleteFromRight.push(rowWithIdColumnOnly)
 		}
 
 		// If the row was deleted on the right table, and the left table row is not deleted, and the
 		// left table row was not updated after the right table row was deleted, delete the left table row.
-		const rightTableRowWasDeleted = rightTableRow[lastDeletedAtColumnLeftTable]
-		const leftTableRowWasNotDeleted = !leftTableRow[lastDeletedAtColumnLeftTable]
-		const leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted = leftTableRow[lastUpdatedAtColumnLeftTable] < rightTableRow[lastDeletedAtColumnLeftTable]
+		const rightTableRowWasDeleted = rightTableRow[deletedAtColumnLeftTable]
+		const leftTableRowWasNotDeleted = !leftTableRow[deletedAtColumnLeftTable]
+		const leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted = leftTableRow[updatedAtColumnLeftTable] < rightTableRow[deletedAtColumnLeftTable]
 		if (rightTableRowWasDeleted && leftTableRowWasNotDeleted && leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted) {
-			return rowsToDeleteFromLeft.push(leftTableRow)
+			const rowWithIdColumnOnly = { [primaryKeyColumnLeftTable]: leftTableRow[primaryKeyColumnLeftTable] }
+			return rowsToDeleteFromLeft.push(rowWithIdColumnOnly)
 		}
 
 		// If the row was updated on the left table, and the right table row is not deleted, and the
 		// right table row was not updated after the left table row was updated, update the right table row.
-		const leftTableRowWasUpdated = leftTableRow[lastUpdatedAtColumnLeftTable] > rightTableRow[lastUpdatedAtColumnLeftTable]
-		const rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated = rightTableRow[lastUpdatedAtColumnLeftTable] < leftTableRow[lastUpdatedAtColumnLeftTable]
+		const leftTableRowWasUpdated = leftTableRow[updatedAtColumnLeftTable] > rightTableRow[updatedAtColumnLeftTable]
+		const rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated = rightTableRow[updatedAtColumnLeftTable] < leftTableRow[updatedAtColumnLeftTable]
 		if (leftTableRowWasUpdated && rightTableRowWasNotDeleted && rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated) {
 			return rowsToUpdateOnRight.push(leftTableRow)
 		}
 
 		// If the row was updated on the right table, and the left table row is not deleted, and the
 		// left table row was not updated after the right table row was updated, update the left table row.
-		const rightTableRowWasUpdated = rightTableRow[lastUpdatedAtColumnLeftTable] > leftTableRow[lastUpdatedAtColumnLeftTable]
-		const leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated = leftTableRow[lastUpdatedAtColumnLeftTable] < rightTableRow[lastUpdatedAtColumnLeftTable]
+		const rightTableRowWasUpdated = rightTableRow[updatedAtColumnLeftTable] > leftTableRow[updatedAtColumnLeftTable]
+		const leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated = leftTableRow[updatedAtColumnLeftTable] < rightTableRow[updatedAtColumnLeftTable]
 		if (rightTableRowWasUpdated && leftTableRowWasNotDeleted && leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated) {
 			return rowsToUpdateOnLeft.push(rightTableRow)
 		}
@@ -105,8 +109,12 @@ export function BiDirectionalSync(
 	})
 
 	rightTableRows.forEach(rightTableRow => {
-		const leftTableRow = leftTableRows.find(leftTableRow => {
-			return columnsToUniquelySelectRowsLeftTable.every(column => {
+		const leftTableRow = leftTableRows.find((leftTableRow: Row) => {
+			return otherColumnsInLeftTable.every(column => {
+				if (columnsNotToUseForComparison.includes(column)) {
+					return true
+				}
+
 				return leftTableRow[column] === rightTableRow[getRightTableColumnEquivalence(column, leftColumnsMapToRightColumn)]
 			})
 		})
@@ -130,6 +138,11 @@ export function BiDirectionalSync(
  * Gets the column equivalent in the right table from the map.
  * If there is no equivalent column in the map, returns same column name.
  */
-function getRightTableColumnEquivalence(leftColumn: string, leftColumnsMapToRightColumn: Record<string, string>): string {
+export function getRightTableColumnEquivalence(leftColumn: string, leftColumnsMapToRightColumn: Record<string, string> | undefined): string {
+
+	if (!leftColumnsMapToRightColumn) {
+		return leftColumn
+	}
+
 	return leftColumnsMapToRightColumn[leftColumn] || leftColumn
 }

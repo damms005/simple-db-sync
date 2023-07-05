@@ -7,7 +7,7 @@ This JavaScript module provides a function `BiDirectionalSync` that performs a b
 To use this module in your project, you can import it as follows:
 
 ```javascript
-import { BiDirectionalSync, getRightTableColumnEquivalence } from "../src/bi-directional-sync";
+import { BiDirectionalSync, getRightTableColumnEquivalence } from "simple-db-sync";
 ```
 
 ## Usage
@@ -34,10 +34,6 @@ The `SyncResult` object returned by the function has the following properties:
 - `rowsToUpdateOnRight`: Rows to be updated on the right table.
 - `rowsToUpdateOnLeft`: Rows to be updated on the left table.
 - `rowsToAddToLeft`: Rows to be added to the left table.
-
-### getRightTableColumnEquivalence Function
-
-The `getRightTableColumnEquivalence` function takes a column name from the left table and a mapping of left table columns to right table columns, and returns the equivalent column in the right table. If there is no equivalent column in the map, it returns the same column name.
 
 ## Tests
 

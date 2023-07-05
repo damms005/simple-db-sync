@@ -1,16 +1,8 @@
-import { BiDirectionalSync, getRightTableColumnEquivalence } from "../src/bi-directional-sync";
+import { BiDirectionalSync } from "../src/bi-directional-sync";
 import { BaseSyncPayload, Row, SyncResult } from "../types";
 import { DateTime } from "luxon";
 
 describe('Bi-directional sync', () => {
-
-	it('should correctly map leftColumns to rightColumns', () => {
-		const leftColumnsMapToRightColumn = { unique1: 'unique1R', unique2: 'unique2R' };
-
-		expect(getRightTableColumnEquivalence('unique1', leftColumnsMapToRightColumn)).toEqual('unique1R');
-		expect(getRightTableColumnEquivalence('unique3', leftColumnsMapToRightColumn)).toEqual('unique3');
-	});
-
 	it('should add missing left table rows to the right table', () => {
 		const leftTable = { selectRows: jest.fn() };
 		const rightTable = { selectRows: jest.fn() };

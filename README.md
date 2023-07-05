@@ -1,4 +1,4 @@
-# DB-Sync
+# Simple DB Sync
 
 This JavaScript module provides a function `BiDirectionalSync` that performs a bi-directional synchronization between two tables. It also exports a helper function `getRightTableColumnEquivalence` that maps columns from the left table to the right table.
 

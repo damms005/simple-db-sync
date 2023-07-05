@@ -1,8 +1,6 @@
 {
   "dependencies": {
-    "luxon": "^3.3.0",
-    "mysql2": "^3.4.3",
-    "sqlite3": "^5.1.6"
+    "luxon": "^3.3.0"
   },
   "name": "db-sync",
   "version": "1.0.0",
@@ -17,10 +15,10 @@
   "scripts": {
     "test": "jest"
   },
-  "keywords": [],
+  "keywords": ["database synchronization"],
   "author": "Damilola Olowookere",
   "license": "ISC",
-  "description": "This JavaScript module provides a function `BiDirectionalSync` that performs a bi-directional synchronization between two tables. It also exports a helper function `getRightTableColumnEquivalence` that maps columns from the left table to the right table.",
+  "description": "A JavaScript module for synchronizing database tables.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/damms005/db-sync.git"

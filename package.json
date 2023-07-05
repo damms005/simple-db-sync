@@ -2,9 +2,8 @@
   "dependencies": {
     "luxon": "^3.3.0"
   },
-  "name": "db-sync",
+  "name": "simple-db-sync",
   "version": "1.0.0",
-  "main": "index.js",
   "devDependencies": {
     "@types/jest": "^29.5.2",
     "@types/luxon": "^3.3.0",

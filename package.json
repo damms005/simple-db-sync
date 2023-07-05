@@ -18,7 +18,15 @@
     "test": "jest"
   },
   "keywords": [],
-  "author": "",
+  "author": "Damilola Olowookere",
   "license": "ISC",
-  "description": ""
+  "description": "This JavaScript module provides a function `BiDirectionalSync` that performs a bi-directional synchronization between two tables. It also exports a helper function `getRightTableColumnEquivalence` that maps columns from the left table to the right table.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/damms005/db-sync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/damms005/db-sync/issues"
+  },
+  "homepage": "https://github.com/damms005/db-sync#readme"
 }

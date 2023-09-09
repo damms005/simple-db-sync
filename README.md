@@ -1,65 +1,57 @@
 # Simple DB Sync
 
-This JavaScript module provides a function `BiDirectionalSync` that performs a bi-directional synchronization between two tables. It also exports a helper function `getRightTableColumnEquivalence` that maps columns from the left table to the right table.
-
-## Best fit
-This tool shines best in instances where there are two tables to be synced but the column names are different
+Perform bi-directional synchronization between two tables, even when column names differ.
 
 ## Installation
 
-To use this module in your project, you can import it as follows:
-
 ```javascript
-import { BiDirectionalSync, getRightTableColumnEquivalence } from "simple-db-sync";
+import { BiDirectionalSync, getRightTableColumnEquivalence } from "simple-db-sync"
 ```
 
 ## Usage
 
-### BiDirectionalSync Function
+1. **Input - [SyncPayload](types.d.ts):**
 
-The `BiDirectionalSync` function takes a `SyncPayload` object as an argument and returns a `SyncResult` object. The `SyncPayload` object should have the following properties:
+   - You will provide the following for the left table. Check the [type definition](types.d.ts) for more details:
 
-- `leftTable`: The left table to be synchronized.
-- `rightTable`: The right table to be synchronized.
-- `primaryKeyColumnLeftTable`: The primary key column of the left table.
-- `createdAtColumnLeftTable`: The created at column of the left table.
-- `updatedAtColumnLeftTable`: The updated at column of the left table.
-- `deletedAtColumnLeftTable`: The deleted at column of the left table.
-- `otherColumnsInLeftTable`: Other columns in the left table.
-- `leftTableWhereClause`: (Optional) Where clause for the left table.
-- `leftColumnsMapToRightColumn`: (Optional) Mapping of left table columns to right table columns.
+     - **Primary Key**: The main column that uniquely identifies each row.
+     - **Timestamp Columns**: Specify when rows were created, updated, or deleted.
+     - **Additional Columns**: Any other columns not previously mentioned.
+     - **Mapping** (Optional): If columns in the left table have different names than in the right table, map them.
+     - **Conditions** (Optional): The `where` clause constraint for row selection.
 
-The `SyncResult` object returned by the function has the following properties:
+2. **Output [SyncResult](types.d.ts):**
+   - **Rows to Add**: Provide what to add to either table.
+   - **Rows to Delete**: Provide what need to be removed from either table.
+   - **Rows to Update**: Provide what to update on either side
 
-- `rowsToAddToRight`: Rows to be added to the right table.
-- `rowsToDeleteFromRight`: Rows to be deleted from the right table.
-- `rowsToDeleteFromLeft`: Rows to be deleted from the left table.
-- `rowsToUpdateOnRight`: Rows to be updated on the right table.
-- `rowsToUpdateOnLeft`: Rows to be updated on the left table.
-- `rowsToAddToLeft`: Rows to be added to the left table.
+### How BiDirectionalSync Works:
 
-## Tests
+1. **Identify Unique Rows**: Using the primary key, the function identifies unique rows in both tables.
 
-The module includes Jest tests to validate its functionality. The tests cover the following scenarios:
+2. **Synchronize Timestamps**: Checks the timestamp columns (`createdAt`, `updatedAt`, `deletedAt`) to identify and manage new, modified, or deleted rows.
 
-- Mapping of left table columns to right table columns.
-- Adding missing rows from the left table to the right table.
-- Adding missing rows from the right table to the left table.
-- Deleting rows from the right table that are deleted in the left table.
-- Deleting rows from the left table that are deleted in the right table.
-- Updating rows in the right table that are updated in the left table.
-- Updating rows in the left table that are updated in the right table.
+3. **Map Column Names**: If the two tables have columns with different names, it uses the mapping information to align them. This ensures the correct columns are compared and synced.
 
-To run the tests, use the following command:
+4. **Handle Specific Conditions**: If conditions are provided, only rows that satisfy these conditions are considered for syncing.
+
+5. **Produce Sync Plan**: After analyzing differences, the function generates a sync plan. This plan includes:
+   - Rows to be added to either table.
+   - Rows to be updated if changes are detected.
+   - Entries to be removed based on deletion timestamps or other conditions.
+
+### Tests
+
+Run the tests using:
 
 ```bash
 npm run test
 ```
 
-## Contributing
+## Contribute
 
-Contributions are welcome. Please submit a pull request with any enhancements or bug fixes. Be sure to include unit tests for any new functionality.
+Pull requests are welcome! Ensure to include tests for new features or when necessary.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License.

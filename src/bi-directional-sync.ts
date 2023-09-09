@@ -1,6 +1,6 @@
 import { SyncResult, Row, SyncPayload } from "../types"
 
-export function BiDirectionalSync({
+export function sync({
 	leftTable,
 	rightTable,
 	primaryKeyColumnLeftTable,

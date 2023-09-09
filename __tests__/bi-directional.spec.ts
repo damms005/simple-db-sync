@@ -1,4 +1,4 @@
-import { BiDirectionalSync } from "../src/bi-directional-sync";
+import { sync } from "../src/bi-directional-sync";
 import { BaseSyncPayload, Row, SyncResult } from "../types";
 import { DateTime } from "luxon";
 
@@ -19,7 +19,7 @@ describe('Bi-directional sync', () => {
 		leftTable.selectRows.mockReturnValue([leftRow]);
 		rightTable.selectRows.mockReturnValue([]);
 
-		const result: SyncResult = BiDirectionalSync({ leftTable, rightTable, ...testParams });
+		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
 
 		expect(result.rowsToAddToRight).toEqual([leftRow]);
 	});
@@ -40,7 +40,7 @@ describe('Bi-directional sync', () => {
 		leftTable.selectRows.mockReturnValue([]);
 		rightTable.selectRows.mockReturnValue([rightRow]);
 
-		const result: SyncResult = BiDirectionalSync({ leftTable, rightTable, ...testParams });
+		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
 
 		expect(result.rowsToAddToLeft).toEqual([rightRow]);
 	});
@@ -64,7 +64,7 @@ describe('Bi-directional sync', () => {
 		leftTable.selectRows.mockReturnValue([leftTableRow]);
 		rightTable.selectRows.mockReturnValue([rightTableRow]);
 
-		const result: SyncResult = BiDirectionalSync({ leftTable, rightTable, ...testParams });
+		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
 
 		expect(result.rowsToDeleteFromRight).toEqual([{ id: 1 }]);
 	});
@@ -85,7 +85,7 @@ describe('Bi-directional sync', () => {
 		leftTable.selectRows.mockReturnValue([]);
 		rightTable.selectRows.mockReturnValue([row]);
 
-		const result: SyncResult = BiDirectionalSync({ leftTable, rightTable, ...testParams });
+		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
 
 		expect(result.rowsToDeleteFromRight).toEqual([]);
 	});
@@ -108,7 +108,7 @@ describe('Bi-directional sync', () => {
 		leftTable.selectRows.mockReturnValue([leftTableRow]);
 		rightTable.selectRows.mockReturnValue([rightTableRow]);
 
-		const result: SyncResult = BiDirectionalSync({ leftTable, rightTable, ...testParams });
+		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
 
 		expect(result.rowsToDeleteFromLeft).toEqual([ { id: 1 } ]);
 	});
@@ -130,7 +130,7 @@ describe('Bi-directional sync', () => {
 		leftTable.selectRows.mockReturnValue([row]);
 		rightTable.selectRows.mockReturnValue([oldRow]);
 
-		const result: SyncResult = BiDirectionalSync({ leftTable, rightTable, ...testParams });
+		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
 
 		expect(result.rowsToUpdateOnRight).toEqual([row]);
 	});
@@ -152,7 +152,7 @@ describe('Bi-directional sync', () => {
 		leftTable.selectRows.mockReturnValue([oldRow]);
 		rightTable.selectRows.mockReturnValue([row]);
 
-		const result: SyncResult = BiDirectionalSync({ leftTable, rightTable, ...testParams });
+		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
 
 		expect(result.rowsToUpdateOnLeft).toEqual([row]);
 	});

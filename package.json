@@ -8,6 +8,7 @@
     "@types/jest": "^29.5.2",
     "@types/luxon": "^3.3.0",
     "jest": "^29.5.0",
+    "prettier": "3.0.3",
     "ts-jest": "^29.1.1",
     "typescript": "^5.1.6"
   },
@@ -27,5 +28,11 @@
   "bugs": {
     "url": "https://github.com/damms005/simple-db-sync/issues"
   },
-  "homepage": "https://github.com/damms005/simple-db-sync#readme"
+  "homepage": "https://github.com/damms005/simple-db-sync#readme",
+  "prettier": {
+    "semi": false,
+    "trailingComma": "all",
+    "printWidth": 165,
+    "arrowParens": "avoid"
+  }
 }

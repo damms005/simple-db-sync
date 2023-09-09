@@ -1,159 +1,159 @@
-import { sync } from "../src/bi-directional-sync";
-import { BaseSyncPayload, Row, SyncResult } from "../types";
-import { DateTime } from "luxon";
+import { Sync } from "../src/bi-directional-sync"
+import { BaseSyncPayload, Row, SyncResult } from "../types"
+import { DateTime } from "luxon"
 
-describe('Bi-directional sync', () => {
-	it('should add missing left table rows to the right table', () => {
-		const leftTable = { selectRows: jest.fn() };
-		const rightTable = { selectRows: jest.fn() };
-		const leftRow: Row = { id: 1, name: 'tolumi', createdAt: new Date(), updatedAt: new Date() };
+describe("Bi-directional sync", () => {
+  it("should add missing left table rows to the right table", () => {
+    const leftTable = { selectRows: jest.fn() }
+    const rightTable = { selectRows: jest.fn() }
+    const leftRow: Row = { id: 1, name: "tolumi", createdAt: new Date(), updatedAt: new Date() }
 
-		const testParams: BaseSyncPayload = {
-			primaryKeyColumnLeftTable: 'id',
-			createdAtColumnLeftTable: 'createdAt',
-			updatedAtColumnLeftTable: 'updatedAt',
-			deletedAtColumnLeftTable: 'deletedAt',
-			otherColumnsInLeftTable: ['anotherColumn'],
-		};
+    const testParams: BaseSyncPayload = {
+      primaryKeyColumnLeftTable: "id",
+      createdAtColumnLeftTable: "createdAt",
+      updatedAtColumnLeftTable: "updatedAt",
+      deletedAtColumnLeftTable: "deletedAt",
+      otherColumnsInLeftTable: ["anotherColumn"],
+    }
 
-		leftTable.selectRows.mockReturnValue([leftRow]);
-		rightTable.selectRows.mockReturnValue([]);
+    leftTable.selectRows.mockReturnValue([leftRow])
+    rightTable.selectRows.mockReturnValue([])
 
-		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
+    const result: SyncResult = Sync({ leftTable, rightTable, ...testParams })
 
-		expect(result.rowsToAddToRight).toEqual([leftRow]);
-	});
+    expect(result.rowsToAddToRight).toEqual([leftRow])
+  })
 
-	it('should add missing right table rows to the left table', () => {
-		const leftTable = { selectRows: jest.fn() };
-		const rightTable = { selectRows: jest.fn() };
-		const rightRow: Row = { id: 1, name: 'tolumi', createdAt: new Date(), updatedAt: new Date() };
+  it("should add missing right table rows to the left table", () => {
+    const leftTable = { selectRows: jest.fn() }
+    const rightTable = { selectRows: jest.fn() }
+    const rightRow: Row = { id: 1, name: "tolumi", createdAt: new Date(), updatedAt: new Date() }
 
-		const testParams: BaseSyncPayload = {
-			primaryKeyColumnLeftTable: 'id',
-			createdAtColumnLeftTable: 'createdAt',
-			updatedAtColumnLeftTable: 'updatedAt',
-			deletedAtColumnLeftTable: 'deletedAt',
-			otherColumnsInLeftTable: ['anotherColumn'],
-		};
+    const testParams: BaseSyncPayload = {
+      primaryKeyColumnLeftTable: "id",
+      createdAtColumnLeftTable: "createdAt",
+      updatedAtColumnLeftTable: "updatedAt",
+      deletedAtColumnLeftTable: "deletedAt",
+      otherColumnsInLeftTable: ["anotherColumn"],
+    }
 
-		leftTable.selectRows.mockReturnValue([]);
-		rightTable.selectRows.mockReturnValue([rightRow]);
+    leftTable.selectRows.mockReturnValue([])
+    rightTable.selectRows.mockReturnValue([rightRow])
 
-		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
+    const result: SyncResult = Sync({ leftTable, rightTable, ...testParams })
 
-		expect(result.rowsToAddToLeft).toEqual([rightRow]);
-	});
+    expect(result.rowsToAddToLeft).toEqual([rightRow])
+  })
 
-	it('should delete rows from right table that are deleted in the left table', () => {
-		const leftTable = { selectRows: jest.fn() };
-		const rightTable = { selectRows: jest.fn() };
+  it("should delete rows from right table that are deleted in the left table", () => {
+    const leftTable = { selectRows: jest.fn() }
+    const rightTable = { selectRows: jest.fn() }
 
-		const yesterday = DateTime.now().minus({ days: 1 }).toJSDate();
-		const leftTableRow: Row = { id: 1, name: 'tolumi', createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() };
-		const rightTableRow: Row = { id: 1, name: 'tolumi', createdAt: yesterday, updatedAt: yesterday };
+    const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
+    const leftTableRow: Row = { id: 1, name: "tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
+    const rightTableRow: Row = { id: 1, name: "tolumi", createdAt: yesterday, updatedAt: yesterday }
 
-		const testParams: BaseSyncPayload = {
-			primaryKeyColumnLeftTable: 'id',
-			createdAtColumnLeftTable: 'createdAt',
-			updatedAtColumnLeftTable: 'updatedAt',
-			deletedAtColumnLeftTable: 'deletedAt',
-			otherColumnsInLeftTable: ['anotherColumn'],
-		};
+    const testParams: BaseSyncPayload = {
+      primaryKeyColumnLeftTable: "id",
+      createdAtColumnLeftTable: "createdAt",
+      updatedAtColumnLeftTable: "updatedAt",
+      deletedAtColumnLeftTable: "deletedAt",
+      otherColumnsInLeftTable: ["anotherColumn"],
+    }
 
-		leftTable.selectRows.mockReturnValue([leftTableRow]);
-		rightTable.selectRows.mockReturnValue([rightTableRow]);
+    leftTable.selectRows.mockReturnValue([leftTableRow])
+    rightTable.selectRows.mockReturnValue([rightTableRow])
 
-		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
+    const result: SyncResult = Sync({ leftTable, rightTable, ...testParams })
 
-		expect(result.rowsToDeleteFromRight).toEqual([{ id: 1 }]);
-	});
+    expect(result.toDeleteFromRight).toEqual([{ id: 1 }])
+  })
 
-	it('should not delete rows from right table that are not deleted in the left table', () => {
-		const leftTable = { selectRows: jest.fn() };
-		const rightTable = { selectRows: jest.fn() };
-		const row: Row = { id: 1, name: 'tolumi', createdAt: new Date(), updatedAt: new Date() };
+  it("should not delete rows from right table that are not deleted in the left table", () => {
+    const leftTable = { selectRows: jest.fn() }
+    const rightTable = { selectRows: jest.fn() }
+    const row: Row = { id: 1, name: "tolumi", createdAt: new Date(), updatedAt: new Date() }
 
-		const testParams: BaseSyncPayload = {
-			primaryKeyColumnLeftTable: 'id',
-			createdAtColumnLeftTable: 'createdAt',
-			updatedAtColumnLeftTable: 'updatedAt',
-			deletedAtColumnLeftTable: 'deletedAt',
-			otherColumnsInLeftTable: ['anotherColumn'],
-		};
+    const testParams: BaseSyncPayload = {
+      primaryKeyColumnLeftTable: "id",
+      createdAtColumnLeftTable: "createdAt",
+      updatedAtColumnLeftTable: "updatedAt",
+      deletedAtColumnLeftTable: "deletedAt",
+      otherColumnsInLeftTable: ["anotherColumn"],
+    }
 
-		leftTable.selectRows.mockReturnValue([]);
-		rightTable.selectRows.mockReturnValue([row]);
+    leftTable.selectRows.mockReturnValue([])
+    rightTable.selectRows.mockReturnValue([row])
 
-		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
+    const result: SyncResult = Sync({ leftTable, rightTable, ...testParams })
 
-		expect(result.rowsToDeleteFromRight).toEqual([]);
-	});
+    expect(result.toDeleteFromRight).toEqual([])
+  })
 
-	it('should delete rows from left table that are deleted in the right table', () => {
-		const leftTable = { selectRows: jest.fn() };
-		const rightTable = { selectRows: jest.fn() };
-		const yesterday = DateTime.now().minus({ days: 1 }).toJSDate();
-		const leftTableRow: Row = { id: 1, name: 'tolumi', createdAt: yesterday, updatedAt: yesterday };
-		const rightTableRow: Row = { id: 1, name: 'tolumi', createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() };
+  it("should delete rows from left table that are deleted in the right table", () => {
+    const leftTable = { selectRows: jest.fn() }
+    const rightTable = { selectRows: jest.fn() }
+    const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
+    const leftTableRow: Row = { id: 1, name: "tolumi", createdAt: yesterday, updatedAt: yesterday }
+    const rightTableRow: Row = { id: 1, name: "tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
 
-		const testParams: BaseSyncPayload = {
-			primaryKeyColumnLeftTable: 'id',
-			createdAtColumnLeftTable: 'createdAt',
-			updatedAtColumnLeftTable: 'updatedAt',
-			deletedAtColumnLeftTable: 'deletedAt',
-			otherColumnsInLeftTable: ['anotherColumn'],
-		};
+    const testParams: BaseSyncPayload = {
+      primaryKeyColumnLeftTable: "id",
+      createdAtColumnLeftTable: "createdAt",
+      updatedAtColumnLeftTable: "updatedAt",
+      deletedAtColumnLeftTable: "deletedAt",
+      otherColumnsInLeftTable: ["anotherColumn"],
+    }
 
-		leftTable.selectRows.mockReturnValue([leftTableRow]);
-		rightTable.selectRows.mockReturnValue([rightTableRow]);
+    leftTable.selectRows.mockReturnValue([leftTableRow])
+    rightTable.selectRows.mockReturnValue([rightTableRow])
 
-		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
+    const result: SyncResult = Sync({ leftTable, rightTable, ...testParams })
 
-		expect(result.rowsToDeleteFromLeft).toEqual([ { id: 1 } ]);
-	});
+    expect(result.toDeleteFromLeft).toEqual([{ id: 1 }])
+  })
 
-	it('should update rows in right table that are updated in the left table', () => {
-		const leftTable = { selectRows: jest.fn() };
-		const rightTable = { selectRows: jest.fn() };
-		const row: Row = { name: 'tolumi', updatedAt: new Date(2023, 5, 30) };
-		const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 20) };
+  it("should update rows in right table that are updated in the left table", () => {
+    const leftTable = { selectRows: jest.fn() }
+    const rightTable = { selectRows: jest.fn() }
+    const row: Row = { name: "tolumi", updatedAt: new Date(2023, 5, 30) }
+    const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 20) }
 
-		const testParams: BaseSyncPayload = {
-			primaryKeyColumnLeftTable: 'id',
-			createdAtColumnLeftTable: 'createdAt',
-			updatedAtColumnLeftTable: 'updatedAt',
-			deletedAtColumnLeftTable: 'deletedAt',
-			otherColumnsInLeftTable: ['anotherColumn'],
-		};
+    const testParams: BaseSyncPayload = {
+      primaryKeyColumnLeftTable: "id",
+      createdAtColumnLeftTable: "createdAt",
+      updatedAtColumnLeftTable: "updatedAt",
+      deletedAtColumnLeftTable: "deletedAt",
+      otherColumnsInLeftTable: ["anotherColumn"],
+    }
 
-		leftTable.selectRows.mockReturnValue([row]);
-		rightTable.selectRows.mockReturnValue([oldRow]);
+    leftTable.selectRows.mockReturnValue([row])
+    rightTable.selectRows.mockReturnValue([oldRow])
 
-		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
+    const result: SyncResult = Sync({ leftTable, rightTable, ...testParams })
 
-		expect(result.rowsToUpdateOnRight).toEqual([row]);
-	});
+    expect(result.rowsToUpdateOnRight).toEqual([row])
+  })
 
-	it('should update rows in left table that are updated in the right table', () => {
-		const leftTable = { selectRows: jest.fn() };
-		const rightTable = { selectRows: jest.fn() };
-		const row: Row = { name: 'tolumi', updatedAt: new Date(2023, 6, 1) };
-		const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 30) };
+  it("should update rows in left table that are updated in the right table", () => {
+    const leftTable = { selectRows: jest.fn() }
+    const rightTable = { selectRows: jest.fn() }
+    const row: Row = { name: "tolumi", updatedAt: new Date(2023, 6, 1) }
+    const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 30) }
 
-		const testParams: BaseSyncPayload = {
-			primaryKeyColumnLeftTable: 'id',
-			createdAtColumnLeftTable: 'createdAt',
-			updatedAtColumnLeftTable: 'updatedAt',
-			deletedAtColumnLeftTable: 'deletedAt',
-			otherColumnsInLeftTable: ['anotherColumn'],
-		};
+    const testParams: BaseSyncPayload = {
+      primaryKeyColumnLeftTable: "id",
+      createdAtColumnLeftTable: "createdAt",
+      updatedAtColumnLeftTable: "updatedAt",
+      deletedAtColumnLeftTable: "deletedAt",
+      otherColumnsInLeftTable: ["anotherColumn"],
+    }
 
-		leftTable.selectRows.mockReturnValue([oldRow]);
-		rightTable.selectRows.mockReturnValue([row]);
+    leftTable.selectRows.mockReturnValue([oldRow])
+    rightTable.selectRows.mockReturnValue([row])
 
-		const result: SyncResult = sync({ leftTable, rightTable, ...testParams });
+    const result: SyncResult = Sync({ leftTable, rightTable, ...testParams })
 
-		expect(result.rowsToUpdateOnLeft).toEqual([row]);
-	});
-});
+    expect(result.rowsToUpdateOnLeft).toEqual([row])
+  })
+})

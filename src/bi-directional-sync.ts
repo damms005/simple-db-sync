@@ -1,11 +1,11 @@
-import { SyncResult, Row, SyncPayload, LeftTable, PrimaryKey } from "../types"
+import { SyncResult, Row, SyncPayload, LeftTable } from "../types"
 
-export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {
+export async function Sync({ leftTable, rightTable }: SyncPayload): Promise<SyncResult> {
   const columnsToSelectFromLeftTable = getLeftColumns(leftTable)
   const columnsToSelectFromRightTable = getRightColumns(leftTable)
   const rightTableWhereClause = getRightConstraintFromLeft(leftTable)
-  const leftTableRows: Row[] = leftTable.getRows(columnsToSelectFromLeftTable, leftTable.whereClause)
-  const rightTableRows: Row[] = rightTable.getRows(columnsToSelectFromRightTable, rightTableWhereClause)
+  const leftTableRows: Row[] = await leftTable.getRows(columnsToSelectFromLeftTable, leftTable.whereClause)
+  const rightTableRows: Row[] = await rightTable.getRows(columnsToSelectFromRightTable, rightTableWhereClause)
 
   const result: SyncResult = {
     rowsToAddToRight: [],

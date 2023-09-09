@@ -12,6 +12,13 @@ export type RowWithoutPrimaryKey = { [column: string]: any }
 
 export type PrimaryKey = any
 
+export interface SyncPayload extends BaseSyncPayload {
+  leftTable: LeftTable
+  rightTable: {
+    getRows: RowsGetter
+  }
+}
+
 export interface SyncResult {
   rowsToAddToRight: RowWithoutPrimaryKey[]
 
@@ -64,12 +71,17 @@ export type LeftTable = {
   mapToRightColumn?: Record<string, string>
 
   whereClause?: Record<string, any>
-  getRows: (columns: string[], whereClause: Record<string, any> | undefined) => Row[]
+  getRows: RowsGetter
 }
 
-export interface SyncPayload extends BaseSyncPayload {
-  leftTable: LeftTable
-  rightTable: {
-    getRows: (columns: string[], whereClause: Record<string, any> | undefined) => Row[]
-  }
-}
+type RowsGetter = (
+  /**
+   * The columns to select from the table.
+   */
+  columns: string[],
+
+  /**
+   * The where clause to use to filter the rows.
+   */
+  whereClause: Record<string, any> | undefined,
+) => Promise<Row[]>

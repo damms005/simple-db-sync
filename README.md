@@ -5,7 +5,7 @@ Perform bi-directional synchronization between two tables, even when column name
 ## Installation
 
 ```javascript
-import { BiDirectionalSync, getRightTableColumnEquivalence } from "simple-db-sync"
+import { Sync } from "simple-db-sync"
 ```
 
 ## Usage
@@ -25,17 +25,17 @@ import { BiDirectionalSync, getRightTableColumnEquivalence } from "simple-db-syn
    - **Rows to Delete**: Provide what need to be removed from either table.
    - **Rows to Update**: Provide what to update on either side
 
-### How BiDirectionalSync Works:
+### How it works:
 
-1. **Identify Unique Rows**: Using the primary key, the function identifies unique rows in both tables.
+1. **Identify Unique Rows**: Using the column differences unique rows are identified in both tables.
 
-2. **Synchronize Timestamps**: Checks the timestamp columns (`createdAt`, `updatedAt`, `deletedAt`) to identify and manage new, modified, or deleted rows.
+2. **Synchronize Timestamps**: Checks the timestamp columns and use the information to identify and manage new, modified, or deleted rows.
 
 3. **Map Column Names**: If the two tables have columns with different names, it uses the mapping information to align them. This ensures the correct columns are compared and synced.
 
 4. **Handle Specific Conditions**: If conditions are provided, only rows that satisfy these conditions are considered for syncing.
 
-5. **Produce Sync Plan**: After analyzing differences, the function generates a sync plan. This plan includes:
+5. **Produce Sync Plan**: After analyzing differences, a sync plan is generated. This plan includes:
    - Rows to be added to either table.
    - Rows to be updated if changes are detected.
    - Entries to be removed based on deletion timestamps or other conditions.

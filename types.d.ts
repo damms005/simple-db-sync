@@ -12,14 +12,20 @@ export type RowWithoutPrimaryKey = { [column: string]: any }
 
 export type PrimaryKey = any
 
+type RightTable = {
+  rows: Row[]
+}
+
 export interface SyncPayload extends BaseSyncPayload {
   leftTable: LeftTable
-  rightTable: {
-    getRows: RowsGetter
-  }
+  rightTable: RightTable
 }
 
 export interface SyncResult {
+  /**
+   * Array of rows to add to right table. If needed, the column names are
+   * already mapped based on the mapToRightColumn property in the left table.
+   */
   rowsToAddToRight: RowWithoutPrimaryKey[]
 
   /**
@@ -59,29 +65,21 @@ export type LeftTable = {
   deletedAt: string
 
   /**
-   * Other columns in the left table, apart from the already specified columns.
+   * Columns to use for matching the corresponding rows in the right table.
+   * The columns map will be used to get the corresponding column names in the right table.
    */
-  otherColumns: string[]
+  comparisonColumns: string[]
 
   /**
    * A map of column names in the left table to column names in the right table. It is
    * only needed if the column names in the left table are different from the column names.
+   * The keys are the column names in the left table, and the values are the column names
+   * in the right table.
+   *
    * You can simply include only the columns that are different.
    */
   mapToRightColumn?: Record<string, string>
 
   whereClause?: Record<string, any>
-  getRows: RowsGetter
+  rows: Row[]
 }
-
-type RowsGetter = (
-  /**
-   * The columns to select from the table.
-   */
-  columns: string[],
-
-  /**
-   * The where clause to use to filter the rows.
-   */
-  whereClause: Record<string, any> | undefined,
-) => Promise<Row[]>

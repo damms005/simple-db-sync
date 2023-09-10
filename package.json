@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "luxon": "^3.3.0"
+    "luxon": "^3.3.0",
+    "sequelize": "^6.33.0"
   },
   "name": "simple-db-sync",
   "version": "1.0.1",

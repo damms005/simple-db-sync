@@ -2,6 +2,16 @@
 
 Perform bi-directional synchronization between two tables, even when column names differ.
 
+> Note, It is not the best way to sync dbs. This is specifically for instances where the best methods does not fit. Ensure to consider:
+
+1. <link to master-slave mysql cluster setup etc.>
+   Scenario:
+1. Arduino board that you connect online intermittently but needs to be in sync with remote
+1. 2 Google Sheets that you need to merge. Either write some script or just dump it in db and sync up with this
+
+> **Warning**
+> Warning: Ensure to run tests before you shift gears
+
 ## Installation
 
 ```javascript
@@ -16,7 +26,7 @@ import { Sync } from "simple-db-sync"
 
      - **Primary Key**: The main column that uniquely identifies each row.
      - **Timestamp Columns**: Specify when rows were created, updated, or deleted.
-     - **Additional Columns**: Any other columns not previously mentioned.
+     - **Comparison Columns**: Columns that should uniquely identify rows
      - **Mapping** (Optional): If columns in the left table have different names than in the right table, map them.
      - **Conditions** (Optional): The `where` clause constraint for row selection.
 

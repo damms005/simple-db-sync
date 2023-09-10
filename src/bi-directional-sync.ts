@@ -1,12 +1,6 @@
-import { SyncResult, Row, SyncPayload, LeftTable } from "../types"
+import { SyncResult, Row, SyncPayload, LeftTable, RightTable } from "../types"
 
-export async function Sync({ leftTable, rightTable }: SyncPayload): Promise<SyncResult> {
-  const columnsToSelectFromLeftTable = getLeftColumns(leftTable)
-  const columnsToSelectFromRightTable = getRightColumns(leftTable)
-  const rightTableWhereClause = getRightConstraintFromLeft(leftTable)
-  const leftTableRows: Row[] = await leftTable.getRows(columnsToSelectFromLeftTable, leftTable.whereClause)
-  const rightTableRows: Row[] = await rightTable.getRows(columnsToSelectFromRightTable, rightTableWhereClause)
-
+export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {
   const result: SyncResult = {
     rowsToAddToRight: [],
     toDeleteFromRight: [],
@@ -16,37 +10,36 @@ export async function Sync({ leftTable, rightTable }: SyncPayload): Promise<Sync
     rowsToAddToLeft: [],
   } as SyncResult
 
-  const columnsNotToUseForComparison = [leftTable.primaryKey, leftTable.createdAt, leftTable.updatedAt, leftTable.deletedAt]
-  const primaryKeyColumnRightTable = getRightTableColumnEquivalence(leftTable.primaryKey, leftTable.mapToRightColumn)
+  const primaryKeyColumnRightTable = getRightColumnNameFromLeft(leftTable.primaryKey, leftTable.mapToRightColumn)
+  const rightTableDeletedAtColumn = getRightColumnNameFromLeft(leftTable.deletedAt, leftTable.mapToRightColumn)
+  const rightTableUpdatedAtColumn = getRightColumnNameFromLeft(leftTable.updatedAt, leftTable.mapToRightColumn)
 
-  leftTableRows.forEach((leftTableRow: Row) => {
-    const rightTableRow: Row | undefined = rightTableRows.find(rightTableRow => {
-      return getRightRow(leftTable, columnsNotToUseForComparison, leftTableRow, rightTableRow)
-    })
+  leftTable.rows.forEach((leftTableRow: Row) => {
+    const matchedRightTableRow: Row | undefined = getCorrespondingRowFromRightTable(rightTable, leftTable, leftTableRow)
 
-    if (!rightTableRow) {
-      const leftRowWithoutIdColumn = { ...leftTableRow }
-      delete leftRowWithoutIdColumn[leftTable.primaryKey]
-      return result.rowsToAddToRight.push(leftRowWithoutIdColumn)
+    if (!matchedRightTableRow) {
+      const { [leftTable.primaryKey]: id, ...leftWithoutPrimaryKey } = leftTableRow
+      const mappedRightTableRow = getRightRowMappedFromLeftRow(leftWithoutPrimaryKey, leftTable)
+      return result.rowsToAddToRight.push(mappedRightTableRow)
     }
 
     // If the row was deleted on the left table, and the right table row is not deleted, and the
     // right table row was not updated after the left table row was deleted, delete the right table row.
     const leftTableRowWasDeleted = leftTableRow[leftTable.deletedAt]
-    const rightTableRowWasNotDeleted = !rightTableRow[leftTable.deletedAt]
-    const rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted = rightTableRow[leftTable.updatedAt] < leftTableRow[leftTable.deletedAt]
+    const rightTableRowWasNotDeleted = !matchedRightTableRow[rightTableDeletedAtColumn]
+    const rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted = matchedRightTableRow[rightTableUpdatedAtColumn] < leftTableRow[leftTable.deletedAt]
     const shouldDeleteRightTableRow = leftTableRowWasDeleted && rightTableRowWasNotDeleted && rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted
 
     if (shouldDeleteRightTableRow) {
-      const primaryKeyToDelete = rightTableRow[primaryKeyColumnRightTable]
+      const primaryKeyToDelete = matchedRightTableRow[primaryKeyColumnRightTable]
       return result.toDeleteFromRight.push(primaryKeyToDelete)
     }
 
     // If the row was deleted on the right table, and the left table row is not deleted, and the
     // left table row was not updated after the right table row was deleted, delete the left table row.
-    const rightTableRowWasDeleted = rightTableRow[leftTable.deletedAt]
+    const rightTableRowWasDeleted = matchedRightTableRow[rightTableDeletedAtColumn]
     const leftTableRowWasNotDeleted = !leftTableRow[leftTable.deletedAt]
-    const leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted = leftTableRow[leftTable.updatedAt] < rightTableRow[leftTable.deletedAt]
+    const leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted = leftTableRow[leftTable.updatedAt] < matchedRightTableRow[rightTableDeletedAtColumn]
     const shouldDeleteLeftTableRow = rightTableRowWasDeleted && leftTableRowWasNotDeleted && leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted
 
     if (shouldDeleteLeftTableRow) {
@@ -56,108 +49,120 @@ export async function Sync({ leftTable, rightTable }: SyncPayload): Promise<Sync
 
     // If the row was updated on the left table, and the right table row is not deleted, and the
     // right table row was not updated after the left table row was updated, update the right table row.
-    const leftTableRowWasUpdated = leftTableRow[leftTable.updatedAt] > rightTableRow[leftTable.updatedAt]
-    const rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated = rightTableRow[leftTable.updatedAt] < leftTableRow[leftTable.updatedAt]
+    const leftTableRowWasUpdated = leftTableRow[leftTable.updatedAt] > matchedRightTableRow[rightTableUpdatedAtColumn]
+    const rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated = matchedRightTableRow[rightTableUpdatedAtColumn] < leftTableRow[leftTable.updatedAt]
     const updateOnRight = leftTableRowWasUpdated && rightTableRowWasNotDeleted && rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated
 
     if (updateOnRight) {
-      const leftTableRowWithoutIdColumn = { ...leftTableRow }
-      delete leftTableRowWithoutIdColumn[leftTable.primaryKey]
-      return result.rowsToUpdateOnRight.push(leftTableRowWithoutIdColumn)
+      const { [leftTable.primaryKey]: id, ...leftWithoutPrimaryKey } = leftTableRow
+      const mappedRightTableRow = getRightRowMappedFromLeftRow(leftWithoutPrimaryKey, leftTable)
+      return result.rowsToUpdateOnRight.push(mappedRightTableRow)
     }
 
     // If the row was updated on the right table, and the left table row is not deleted, and the
     // left table row was not updated after the right table row was updated, update the left table row.
-    const rightTableRowWasUpdated = rightTableRow[leftTable.updatedAt] > leftTableRow[leftTable.updatedAt]
-    const leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated = leftTableRow[leftTable.updatedAt] < rightTableRow[leftTable.updatedAt]
+    const rightTableRowWasUpdated = matchedRightTableRow[rightTableUpdatedAtColumn] > leftTableRow[leftTable.updatedAt]
+    const leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated = leftTableRow[leftTable.updatedAt] < matchedRightTableRow[rightTableUpdatedAtColumn]
     const updateOnLeft = rightTableRowWasUpdated && leftTableRowWasNotDeleted && leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated
 
     if (updateOnLeft) {
-      const rightTableRowWithoutIdColumn = { ...rightTableRow }
-      delete rightTableRowWithoutIdColumn[primaryKeyColumnRightTable]
-      return result.rowsToUpdateOnLeft.push(rightTableRowWithoutIdColumn)
+      const { [primaryKeyColumnRightTable]: id, ...rightRowWithoutIdColumn } = matchedRightTableRow
+      const mappedRow = getLeftRowMappedFromRightRow(rightRowWithoutIdColumn, leftTable)
+      return result.rowsToUpdateOnLeft.push(mappedRow)
     }
   })
 
-  rightTableRows.forEach(rightTableRow => {
-    const leftTableRow = leftTableRows.find((leftTableRow: Row) => {
-      return leftTable.otherColumns.every(column => {
-        if (columnsNotToUseForComparison.includes(column)) {
-          return true
-        }
-
-        return leftTableRow[column] === rightTableRow[getRightTableColumnEquivalence(column, leftTable.mapToRightColumn)]
-      })
+  rightTable.rows.forEach(rightTableRow => {
+    const leftTableRow = leftTable.rows.find((leftTableRow: Row) => {
+      return leftMatchesRight(leftTable, leftTableRow, rightTableRow)
     })
 
     if (!leftTableRow) {
-      const rightRowWithoutIdColumn = { ...rightTableRow }
-      delete rightRowWithoutIdColumn[primaryKeyColumnRightTable]
-      return result.rowsToAddToLeft.push(rightRowWithoutIdColumn)
+      const { [primaryKeyColumnRightTable]: id, ...rowWithoutIdColumn } = rightTableRow
+      const mappedRow = getLeftRowMappedFromRightRow(rowWithoutIdColumn, leftTable)
+      return result.rowsToAddToLeft.push(mappedRow)
     }
   })
 
   return result
 }
 
-function getRightRow(leftTable: LeftTable, columnsNotToUseForComparison: string[], leftTableRow: Row, rightTableRow: Row): unknown {
-  return leftTable.otherColumns.every(column => {
-    if (columnsNotToUseForComparison.includes(column)) {
-      return true
-    }
+function getCorrespondingRowFromRightTable(rightTable: RightTable, leftTable: LeftTable, leftTableRow: Row): Row | undefined {
+  return rightTable.rows.find(rightTableRow => {
+    return rowAreSame(leftTableRow, rightTableRow, leftTable)
+  })
+}
 
+function leftMatchesRight(leftTable: LeftTable, leftTableRow: Row, rightTableRow: Row): boolean {
+  return leftTable.comparisonColumns.every(column => {
+    const rightValue = rightTableRow[getRightColumnNameFromLeft(column, leftTable.mapToRightColumn)]
     const leftValue = leftTableRow[column]
-    const rightValue = rightTableRow[getRightTableColumnEquivalence(column, leftTable.mapToRightColumn)]
     return leftValue === rightValue
   })
 }
 
 /**
- * Get the columns to select from the left table.
+ * Checks if the left and right rows are the same, based on the comparison map columns.
  */
-function getLeftColumns(leftTable: LeftTable) {
-  return [leftTable.primaryKey, ...leftTable.otherColumns, leftTable.createdAt, leftTable.updatedAt, leftTable.deletedAt]
+function rowAreSame(leftTableRow: Row, rightTableRow: Row, leftTable: LeftTable): boolean {
+  return leftTable.comparisonColumns.every(column => {
+    const leftValue = leftTableRow[column]
+    const rightValue = rightTableRow[getRightColumnNameFromLeft(column, leftTable.mapToRightColumn)]
+    return leftValue === rightValue
+  })
 }
 
 /**
- * Get the columns to select from the right table as mapped from the left table.
- */
-function getRightColumns(leftTable: LeftTable) {
-  return [
-    getRightTableColumnEquivalence(leftTable.primaryKey, leftTable.mapToRightColumn),
-    ...leftTable.otherColumns.map(column => getRightTableColumnEquivalence(column, leftTable.mapToRightColumn)),
-    getRightTableColumnEquivalence(leftTable.createdAt, leftTable.mapToRightColumn),
-    getRightTableColumnEquivalence(leftTable.updatedAt, leftTable.mapToRightColumn),
-    getRightTableColumnEquivalence(leftTable.deletedAt, leftTable.mapToRightColumn),
-  ]
-}
-
-/**
- * Get the where clause for the right table from the left table.
- */
-function getRightConstraintFromLeft(leftTable: LeftTable) {
-  const leftTableWhereClause = leftTable.whereClause
-
-  const rightTableWhereClause: Record<string, string> | undefined = leftTableWhereClause
-    ? Object.keys(leftTableWhereClause).reduce(
-        (accumulator, key) => {
-          accumulator[getRightTableColumnEquivalence(key, leftTable.mapToRightColumn)] = leftTableWhereClause[key]
-          return accumulator
-        },
-        {} as Record<string, string>,
-      )
-    : undefined
-  return rightTableWhereClause
-}
-
-/**
- * Gets the column equivalent in the right table from the map.
+ * Given the left column name, get the equivalent right column name from the map.
  * If there is no equivalent column in the map, returns same column name.
  */
-export function getRightTableColumnEquivalence(leftColumn: string, leftColumnsMapToRightColumn: Record<string, string> | undefined): string {
+export function getRightColumnNameFromLeft(leftColumn: string, leftColumnsMapToRightColumn: Record<string, string> | undefined): string {
   if (!leftColumnsMapToRightColumn) {
     return leftColumn
   }
 
   return leftColumnsMapToRightColumn[leftColumn] || leftColumn
+}
+
+/**
+ * Returns the left table row with the column names mapped to the right table column names.
+ */
+function getLeftRowMappedFromRightRow(rightRow: Row, leftTable: LeftTable) {
+  const mappedLeftTableRow: Row = {}
+
+  Object.entries(rightRow).forEach(([columnName, value]) => {
+    const leftColumn = getLeftColumnNameFromRight(columnName, leftTable)
+    mappedLeftTableRow[leftColumn] = value
+  })
+
+  return mappedLeftTableRow
+}
+
+function getRightRowMappedFromLeftRow(leftRow: Row, leftTable: LeftTable) {
+  const mappedRightTableRow: Row = {}
+
+  Object.entries(leftRow).forEach(([columnName, value]) => {
+    const rightColumn = getRightColumnNameFromLeft(columnName, leftTable.mapToRightColumn)
+    mappedRightTableRow[rightColumn] = value
+  })
+
+  return mappedRightTableRow
+}
+
+/**
+ * Given the right column name, get the equivalent left column name from the map.
+ * If there is no equivalent column in the map, returns same column name.
+ */
+function getLeftColumnNameFromRight(rightColumn: string, leftTable: LeftTable): string {
+  if (!leftTable.mapToRightColumn) {
+    return rightColumn
+  }
+
+  for (const [leftColumn, rightColumnEquivalent] of Object.entries(leftTable.mapToRightColumn)) {
+    if (rightColumnEquivalent === rightColumn) {
+      return leftColumn
+    }
+  }
+
+  return rightColumn
 }

@@ -1,11 +1,10 @@
-import * as _module from "../src/bi-directional-sync";
+import * as _module from "../src/bi-directional-sync"
 
-describe('Column map', () => {
+describe("Column map", () => {
+  it("should correctly map leftColumns to rightColumns", () => {
+    const leftColumnsMapToRightColumn = { unique1: "unique1R", unique2: "unique2R" }
 
-	it('should correctly map leftColumns to rightColumns', () => {
-		const leftColumnsMapToRightColumn = { unique1: 'unique1R', unique2: 'unique2R' };
-
-		expect(_module.getRightTableColumnEquivalence('unique1', leftColumnsMapToRightColumn)).toEqual('unique1R');
-		expect(_module.getRightTableColumnEquivalence('unique3', leftColumnsMapToRightColumn)).toEqual('unique3');
-	});
-});
+    expect(_module.getRightColumnNameFromLeft("unique1", leftColumnsMapToRightColumn)).toEqual("unique1R")
+    expect(_module.getRightColumnNameFromLeft("unique3", leftColumnsMapToRightColumn)).toEqual("unique3")
+  })
+})

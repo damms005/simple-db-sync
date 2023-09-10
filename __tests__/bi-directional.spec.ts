@@ -1,187 +1,195 @@
 import { Sync } from "../src/bi-directional-sync"
-import { SyncPayload, Row, SyncResult } from "../types"
+import { SyncPayload, Row, SyncResult, LeftTable } from "../types"
 import { DateTime } from "luxon"
 
 describe("Bi-directional sync", () => {
   it("should add missing left table rows to the right table", async () => {
+    const leftRow: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
     const leftTable = {
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      otherColumns: ["anotherColumn"],
-      getRows: jest.fn(),
+      comparisonColumns: ["anotherColumn"],
+      rows: [leftRow],
     }
-    const rightTable = { getRows: jest.fn() }
-    const leftRow: Row = { id: 1, name: "tolumi", createdAt: new Date(), updatedAt: new Date() }
-
-    leftTable.getRows.mockReturnValue([leftRow])
-    rightTable.getRows.mockReturnValue([])
+    const rightTable = { rows: [] }
 
     const payload: SyncPayload = {
       leftTable,
       rightTable,
     }
 
-    const result: SyncResult = await Sync(payload)
+    const result: SyncResult = Sync(payload)
 
-    expect(result.rowsToAddToRight).toEqual([delete leftRow.id && leftRow])
+    const { id, ...rowWithoutId } = leftRow
+    expect(result.rowsToAddToRight).toEqual([rowWithoutId])
   })
 
   it("should add missing right table rows to the left table", async () => {
+    const rightRow: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
     const leftTable = {
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      otherColumns: ["anotherColumn"],
-      getRows: jest.fn(),
+      comparisonColumns: ["anotherColumn"],
+      rows: [],
     }
-    const rightTable = { getRows: jest.fn() }
-    const rightRow: Row = { id: 1, name: "tolumi", createdAt: new Date(), updatedAt: new Date() }
+    const rightTable = { rows: [rightRow] }
 
     const payload: SyncPayload = {
       leftTable,
       rightTable,
     }
 
-    leftTable.getRows.mockReturnValue([])
-    rightTable.getRows.mockReturnValue([rightRow])
+    const result: SyncResult = Sync(payload)
 
-    const result: SyncResult = await Sync(payload)
-
-    expect(result.rowsToAddToLeft).toEqual([delete rightRow.id && rightRow])
+    const { id, ...rowWithoutId } = rightRow
+    expect(result.rowsToAddToLeft).toEqual([rowWithoutId])
   })
 
   it("should delete rows from right table that are deleted in the left table", async () => {
+    const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
+    const leftTableRow: Row = { id: 1, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
+    const rightTableRow: Row = { id: 5, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday }
+
     const leftTable = {
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      otherColumns: ["anotherColumn"],
-      getRows: jest.fn(),
+      comparisonColumns: ["anotherColumn"],
+      rows: [leftTableRow],
     }
-    const rightTable = { getRows: jest.fn() }
-
-    const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
-    const leftTableRow: Row = { id: 1, name: "tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
-    const rightTableRow: Row = { id: 5, name: "tolumi", createdAt: yesterday, updatedAt: yesterday }
+    const rightTable = { rows: [rightTableRow] }
 
     const payload: SyncPayload = {
       leftTable,
       rightTable,
     }
 
-    leftTable.getRows.mockReturnValue([leftTableRow])
-    rightTable.getRows.mockReturnValue([rightTableRow])
-
-    const result: SyncResult = await Sync(payload)
+    const result: SyncResult = Sync(payload)
 
     expect(result.toDeleteFromRight).toEqual([5])
   })
 
   it("should not delete rows from right table that are not deleted in the left table", async () => {
+    const row: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
     const leftTable = {
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      otherColumns: ["anotherColumn"],
-      getRows: jest.fn(),
+      comparisonColumns: ["anotherColumn"],
+      rows: [],
     }
-    const rightTable = { getRows: jest.fn() }
-    const row: Row = { id: 1, name: "tolumi", createdAt: new Date(), updatedAt: new Date() }
+    const rightTable = { rows: [row] }
 
     const payload: SyncPayload = {
       leftTable,
       rightTable,
     }
 
-    leftTable.getRows.mockReturnValue([])
-    rightTable.getRows.mockReturnValue([row])
-
-    const result: SyncResult = await Sync(payload)
+    const result: SyncResult = Sync(payload)
 
     expect(result.toDeleteFromRight).toEqual([])
   })
 
   it("should delete rows from left table that are deleted in the right table", async () => {
+    const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
+    const leftTableRow: Row = { id: 6, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday }
+    const rightTableRow: Row = { id: 1, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
     const leftTable = {
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      otherColumns: ["anotherColumn"],
-      getRows: jest.fn(),
+      comparisonColumns: ["anotherColumn"],
+      rows: [leftTableRow],
     }
-    const rightTable = { getRows: jest.fn() }
-    const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
-    const leftTableRow: Row = { id: 6, name: "tolumi", createdAt: yesterday, updatedAt: yesterday }
-    const rightTableRow: Row = { id: 1, name: "tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
+    const rightTable = { rows: [rightTableRow] }
 
     const payload: SyncPayload = {
       leftTable,
       rightTable,
     }
 
-    leftTable.getRows.mockReturnValue([leftTableRow])
-    rightTable.getRows.mockReturnValue([rightTableRow])
-
-    const result: SyncResult = await Sync(payload)
+    const result: SyncResult = Sync(payload)
 
     expect(result.toDeleteFromLeft).toEqual([6])
   })
 
   it("should update rows in right table that are updated in the left table", async () => {
-    const leftTable = {
+    const luxonNow = DateTime.now()
+    const luxonNowMinusOneDay = luxonNow.minus({ days: 1 })
+    const oldRow: Row = { name: "Tolumi", playful: "no", updatedAt: luxonNowMinusOneDay.toString() }
+    const newRow: Row = { ...oldRow, playful: "yes", updatedAt: luxonNow.toString() }
+    const leftTable: LeftTable = {
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      otherColumns: ["anotherColumn"],
-      getRows: jest.fn(),
+      comparisonColumns: ["anotherColumn"],
+      rows: [newRow],
     }
-    const rightTable = { getRows: jest.fn() }
-    const row: Row = { name: "tolumi", updatedAt: new Date(2023, 5, 30) }
-    const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 20) }
+    const rightTable = { rows: [oldRow] }
 
     const payload: SyncPayload = {
       leftTable,
       rightTable,
     }
 
-    leftTable.getRows.mockReturnValue([row])
-    rightTable.getRows.mockReturnValue([oldRow])
+    const result: SyncResult = Sync(payload)
 
-    const result: SyncResult = await Sync(payload)
-
-    expect(result.rowsToUpdateOnRight).toEqual([row])
+    expect(result.rowsToUpdateOnRight).toEqual([newRow])
   })
 
   it("should update rows in left table that are updated in the right table", async () => {
+    const row: Row = { name: "Tolumi", updatedAt: new Date(2023, 6, 1) }
+    const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 30) }
     const leftTable = {
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      otherColumns: ["anotherColumn"],
-      getRows: jest.fn(),
+      comparisonColumns: ["anotherColumn"],
+      rows: [oldRow],
     }
-    const rightTable = { getRows: jest.fn() }
-    const row: Row = { name: "tolumi", updatedAt: new Date(2023, 6, 1) }
-    const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 30) }
+    const rightTable = { rows: [row] }
 
     const payload: SyncPayload = {
       leftTable,
       rightTable,
     }
 
-    leftTable.getRows.mockReturnValue([oldRow])
-    rightTable.getRows.mockReturnValue([row])
-
-    const result: SyncResult = await Sync(payload)
+    const result: SyncResult = Sync(payload)
 
     expect(result.rowsToUpdateOnLeft).toEqual([row])
+  })
+
+  it("can use map to get corresponding column names in the right table", async () => {
+    const leftRow: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
+    const leftTable = {
+      primaryKey: "id",
+      createdAt: "createdAt",
+      updatedAt: "updatedAt",
+      deletedAt: "deletedAt",
+      comparisonColumns: ["name"],
+      mapToRightColumn: { name: "name_in_right_table" },
+      rows: [leftRow],
+    }
+    const rightTable = { rows: [] }
+
+    const payload: SyncPayload = {
+      leftTable,
+      rightTable,
+    }
+
+    const result: SyncResult = Sync(payload)
+
+    const rightRow: Row = { name_in_right_table: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
+
+    expect(result.rowsToAddToRight).toEqual([rightRow])
   })
 })

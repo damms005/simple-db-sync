@@ -13,6 +13,7 @@ export type RowWithoutPrimaryKey = { [column: string]: any }
 export type PrimaryKey = any
 
 type RightTable = {
+  name: string
   rows: Row[]
 }
 
@@ -41,9 +42,17 @@ export interface SyncResult {
   rowsToUpdateOnRight: RowWithoutPrimaryKey[]
   rowsToUpdateOnLeft: RowWithoutPrimaryKey[]
   rowsToAddToLeft: RowWithoutPrimaryKey[]
+
+  /**
+   * Logs the result of the sync operation. Can be useful for
+   * constructing the 'where' clause for the next sync operation.
+   */
+  updateSyncTimes(sequelize: Sequelize): Promise<void>
 }
 
 export type LeftTable = {
+  name: string
+
   /**
    * The name of the primary key column in the left table.
    */

@@ -1,4 +1,6 @@
+import { Sequelize } from "sequelize"
 import { SyncResult, Row, SyncPayload, LeftTable, RightTable } from "../types"
+import { updateLastSyncTime } from "./logger"
 
 export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {
   const result: SyncResult = {
@@ -8,6 +10,11 @@ export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {
     rowsToUpdateOnRight: [],
     rowsToUpdateOnLeft: [],
     rowsToAddToLeft: [],
+
+    updateSyncTimes: async (sequelize: Sequelize) => {
+      await updateLastSyncTime(sequelize, leftTable)
+      await updateLastSyncTime(sequelize, rightTable)
+    },
   } as SyncResult
 
   const primaryKeyColumnRightTable = getRightColumnNameFromLeft(leftTable.primaryKey, leftTable.mapToRightColumn)

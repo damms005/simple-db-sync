@@ -160,7 +160,7 @@ function getRightRowMappedFromLeftRow(leftRow: Row, leftTable: LeftTable) {
  * Given the right column name, get the equivalent left column name from the map.
  * If there is no equivalent column in the map, returns same column name.
  */
-function getLeftColumnNameFromRight(rightColumn: string, leftTable: LeftTable): string {
+export function getLeftColumnNameFromRight(rightColumn: string, leftTable: LeftTable): string {
   if (!leftTable.mapToRightColumn) {
     return rightColumn
   }

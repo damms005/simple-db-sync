@@ -20,7 +20,8 @@ export async function updateLastSyncTime(sequelize: Sequelize, table: LeftTable 
 
 /**
  * Returns a where clause that can be used to get all rows from the provided table that have been
- * created, updated, or deleted since the last sync time for the provided table.
+ * created, updated, or deleted since the last sync time for the provided table. Ideally, the same
+ * where clause should be applicable to the left and right tables.
  *
  * @param table The table to get the where clause for.
  * @param sequelize The Sequelize instance.

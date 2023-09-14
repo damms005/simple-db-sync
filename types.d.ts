@@ -22,34 +22,6 @@ export interface SyncPayload extends BaseSyncPayload {
   rightTable: RightTable
 }
 
-export interface SyncResult {
-  /**
-   * Array of rows to add to right table. If needed, the column names are
-   * already mapped based on the mapToRightColumn property in the left table.
-   */
-  rowsToAddToRight: RowWithoutPrimaryKey[]
-
-  /**
-   * Array of primary keys to delete from right table.
-   */
-  toDeleteFromRight: PrimaryKey[]
-
-  /**
-   * Array of primary keys to delete from left table.
-   */
-  toDeleteFromLeft: PrimaryKey[]
-
-  rowsToUpdateOnRight: RowWithoutPrimaryKey[]
-  rowsToUpdateOnLeft: RowWithoutPrimaryKey[]
-  rowsToAddToLeft: RowWithoutPrimaryKey[]
-
-  /**
-   * Logs the result of the sync operation. Can be useful for
-   * constructing the 'where' clause for the next sync operation.
-   */
-  updateSyncTimes(sequelize: Sequelize): Promise<void>
-}
-
 export type LeftTable = {
   name: string
 
@@ -89,6 +61,33 @@ export type LeftTable = {
    */
   mapToRightColumn?: Record<string, string>
 
-  whereClause?: Record<string, any>
   rows: Row[]
+}
+
+export interface SyncResult {
+  /**
+   * Array of rows to add to right table. If needed, the column names are
+   * already mapped based on the mapToRightColumn property in the left table.
+   */
+  rowsToAddToRight: RowWithoutPrimaryKey[]
+
+  /**
+   * Array of primary keys to delete from right table.
+   */
+  toDeleteFromRight: PrimaryKey[]
+
+  /**
+   * Array of primary keys to delete from left table.
+   */
+  toDeleteFromLeft: PrimaryKey[]
+
+  rowsToUpdateOnRight: RowWithoutPrimaryKey[]
+  rowsToUpdateOnLeft: RowWithoutPrimaryKey[]
+  rowsToAddToLeft: RowWithoutPrimaryKey[]
+
+  /**
+   * Logs the result of the sync operation. Can be useful for
+   * constructing the 'where' clause for the next sync operation.
+   */
+  updateSyncTimes(sequelize: Sequelize): Promise<void>
 }

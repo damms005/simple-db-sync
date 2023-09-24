@@ -4,6 +4,12 @@
   },
   "name": "simple-db-sync",
   "version": "1.0.2",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "devDependencies": {
     "@types/jest": "^29.5.2",
     "@types/luxon": "^3.3.0",
@@ -14,6 +20,8 @@
     "typescript": "^5.1.6"
   },
   "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "jest"
   },
   "keywords": [

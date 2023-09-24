@@ -3,9 +3,13 @@
 Perform bi-directional synchronization between two tables, even when column names differ.
 
 > **Note**
-> This package is not the best way to sync databases. This is specifically for instances where none of the available methods is not desirable. Consider alternatives like master-slave replications, writes forwarding, etc and only when none of those fits that this package should be considered. See below for typical use-cases.
+> This package is not the best way to sync databases. You should first consider better alternatives like master-slave replications, writes forwarding, etc.
+> It is only when none of those alternatives is desirable that you should consider this package. See below for typical use-case.
 
-# Typical user-cases
+> **Warning**
+> Warning: Ensure to run tests before you shift gears.
+
+## Typical use-case
 
 Scenario:
 
@@ -13,16 +17,17 @@ Scenario:
 - Google Sheets with different headers and need to be merged. Either write some script or just dump it in db and sync up with this tool.
 - A local SQLite db and remote MySQL server with different schema that need some tables to be in sync.
 
-> **Warning**
-> Warning: Ensure to run tests before you shift gears.
-
 ## Installation
+
+```shell
+npm i simple-db-sync
+```
+
+## Usage
 
 ```javascript
 import { Sync } from "simple-db-sync"
 ```
-
-## Usage
 
 1. **Input - [SyncPayload](types.d.ts):**
 
@@ -38,7 +43,7 @@ import { Sync } from "simple-db-sync"
    - **Rows to Delete**: Provide what need to be removed from either table.
    - **Rows to Update**: Provide what to update on either side
 
-### How it works:
+## How it works:
 
 1. **Identify Unique Rows**: Using the column differences unique rows are identified in both tables.
 
@@ -56,7 +61,7 @@ import { Sync } from "simple-db-sync"
 
 6. Optionally, you can also use the Sync API to log sync time to the database, such that for subsequent sync, you can get the last sync time and use that to filter rows to compare.
 
-### Tests
+## Tests
 
 Run the tests using:
 

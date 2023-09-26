@@ -22,18 +22,37 @@ npm install simple-db-sync
 
 ## Usage
 
-Basically, you need to do two things:
+Basically, you need to do three things:
 
-- import the main object:
+- Import the main object:
 
 ```javascript
 import { Sync } from "simple-db-sync"
 ```
 
-- call the sync function:
+- Call the sync function to perform the sync task:
 
 ```javascript
-import { Sync } from "simple-db-sync"
+  const result: SyncResult = Sync(syncPayload)
+```
+
+Usually, you may utilize dflknf to build the `syncPayload`
+
+- Finally, consume the result of the sync task. See the Output section below for more details
+
+### Logging (Optional)
+
+When you're done syncing, the response contains a function called. `updateSyncTimes`. You can use this function to store details of the sync. A table called `simple_db_sync_tracking` will be used for this (it will be created if not already exists). Note that [Sequelize](https://sequelize.org) is required for this particular feature.
+
+For subsequent sync, you can then use the `getSyncWhereClauseFor( table )` function to get the `WHERE` clause segment of your `SELECT` statement for the next sync
+
+```javascript
+import { getSyncWhereClauseFor } from "simple-db-sync/dist/logger"
+const whereClause = getSyncWhereClauseFor(table, sequelize)
+```
+
+```sql
+SELECT * FROM table WHERE {whereClause}
 ```
 
 ### Input - [SyncPayload](types.d.ts):

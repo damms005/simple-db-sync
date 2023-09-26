@@ -41,6 +41,11 @@ export async function getSyncWhereClauseFor(
   // Get the last sync time for the provided table from the tracking table
   const lastSyncTime = await getLastSyncTime(sequelize, table)
 
+  if (!lastSyncTime) {
+    // return a where clause that will return all rows
+    return " ( 1=1 ) "
+  }
+
   // Build the SQL query string
   const sql = `(
     (${createdAt} IS NULL OR ${createdAt} >= ${lastSyncTime})

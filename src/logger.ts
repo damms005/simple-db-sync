@@ -1,5 +1,5 @@
 import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes } from "sequelize"
-import { LeftTable, RightTable } from "../types"
+import { LeftTable, RightTable } from "./types"
 
 export const simple_db_sync_tracking = "simple_db_sync_tracking"
 

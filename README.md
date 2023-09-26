@@ -22,6 +22,16 @@ npm install simple-db-sync
 
 ## Usage
 
+Basically, you need to do two things:
+
+- import the main object:
+
+```javascript
+import { Sync } from "simple-db-sync"
+```
+
+- call the sync function:
+
 ```javascript
 import { Sync } from "simple-db-sync"
 ```

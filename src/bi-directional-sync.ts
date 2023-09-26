@@ -1,5 +1,5 @@
 import { Sequelize } from "sequelize"
-import { SyncResult, Row, SyncPayload, LeftTable, RightTable } from "../types"
+import { SyncResult, Row, SyncPayload, LeftTable, RightTable } from "./types"
 import { updateLastSyncTime } from "./logger"
 
 export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {

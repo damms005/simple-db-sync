@@ -1,3 +1,5 @@
+import { Sequelize } from "sequelize"
+
 /**
  * This is a key-value pair of column names and their corresponding values, including
  * the primary key column.
@@ -12,12 +14,12 @@ export type RowWithoutPrimaryKey = { [column: string]: any }
 
 export type PrimaryKey = any
 
-type RightTable = {
+export type RightTable = {
   name: string
   rows: Row[]
 }
 
-export interface SyncPayload extends BaseSyncPayload {
+export interface SyncPayload {
   leftTable: LeftTable
   rightTable: RightTable
 }

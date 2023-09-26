@@ -3,7 +3,7 @@
     "luxon": "^3.3.0"
   },
   "name": "simple-db-sync",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "dist/bi-directional-sync.js",
   "types": "dist/bi-directional-sync.d.ts",
   "files": [

@@ -1,5 +1,5 @@
 import * as _module from "../src/bi-directional-sync"
-import { LeftTable, Row, SyncPayload, SyncResult } from "../types"
+import { LeftTable, Row, SyncPayload, SyncResult } from "../src/types"
 
 describe("Column map", () => {
 

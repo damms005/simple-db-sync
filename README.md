@@ -36,7 +36,10 @@ import { Sync } from "simple-db-sync"
   const result: SyncResult = Sync(syncPayload)
 ```
 
-Usually, you may utilize dflknf to build the `syncPayload`
+Usually, if you had previously synced with this package and used `updateLastSyncTime` to log your sync details, you may utilize the last sync time returned by `getTrackingTable` to build the `syncPayload` and limit sync to only what changed since last sync.
+
+> **Warning**
+> If you are using foreign keys, ensure to first sync the parent tables, so that all required denormalisation data you need to build the syncPayload for the dependent/child tables are available, then sync the dependent/child tables.
 
 - Finally, consume the result of the sync task. See the Output section below for more details
 

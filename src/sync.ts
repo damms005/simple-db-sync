@@ -219,7 +219,7 @@ function getRealValueForRightRowFrom(leftCell: Cell, leftTable: LeftTable, right
     throw new Error(message)
   }
 
-  const denormalisedValue: DenormalisationMap | undefined = rightTableDenormalisationDetail.denormalisationMap.find(nonNormal => nonNormal.normalisedColumnValue === leftCell.denormalisedValue)
+  const denormalisedValue: DenormalisationMap | undefined = rightTableDenormalisationDetail.denormalisationMap.find(nonNormal => nonNormal.denormalisedColumnValue === leftCell.denormalisedValue)
 
   if (!denormalisedValue) {
     const message = `Left table has a foreign key column '${leftCell.column}' which in the right table is the '${rightTableColumn}' column, but the right table
@@ -250,7 +250,7 @@ function getRealValueForLeftRowFrom(rightCell: Cell, leftTable: LeftTable, right
     throw new Error(message)
   }
 
-  const denormalisedValue: DenormalisationMap | undefined = leftTableDenormalisationDetail.denormalisationMap.find(nonNormal => nonNormal.normalisedColumnValue === rightCell.denormalisedValue)
+  const denormalisedValue: DenormalisationMap | undefined = leftTableDenormalisationDetail.denormalisationMap.find(nonNormal => nonNormal.denormalisedColumnValue === rightCell.denormalisedValue)
 
   if (!denormalisedValue) {
     const message = `Right table has a foreign key column '${rightCell.column}' which in the left table is the '${leftTableColumn}' column, but the left table

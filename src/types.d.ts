@@ -72,7 +72,7 @@ export interface LeftTable extends Table {
   /**
    * A map of column names in the left table to column names in the right table. It is
    * only needed if the column names in the left table are different from the column names.
-   * The keys are the column names in the left table, and the values are the column names
+   * The keys are the column names in the left table, and the values are the corresponding column names
    * in the right table.
    *
    * You can simply include only the columns that are different.

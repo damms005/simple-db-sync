@@ -216,7 +216,7 @@ describe("Bi-directional sync", () => {
   it("can use map to get corresponding column names in the right table", async () => {
     const now = new Date()
     const leftRow: Row = [{ column: 'id', value: 1 }, { column: 'name', value: "Tolumi" }, { column: 'createdAt', value: now }, { column: 'updatedAt', value: now }]
-    const leftTable = {
+    const leftTable: LeftTable = {
       name: "left",
       primaryKey: "id",
       createdAt: "createdAt",

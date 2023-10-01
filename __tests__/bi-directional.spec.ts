@@ -1,17 +1,23 @@
 import { Sync } from "../src/bi-directional-sync"
-import { SyncPayload, Row, SyncResult, LeftTable } from "../types"
 import { DateTime } from "luxon"
+import { Row, SyncPayload, SyncResult, LeftTable } from "../src/types"
 
 describe("Bi-directional sync", () => {
   it("should add missing left table rows to the right table", async () => {
-    const leftRow: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
+    const now = new Date()
+    const leftRow: Row = [
+      { column: 'id', value: 1 },
+      { column: 'name', value: "Tolumi" },
+      { column: 'createdAt', value: now },
+      { column: 'updatedAt', value: now }
+    ]
     const leftTable = {
       name: "left",
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      comparisonColumns: ["anotherColumn"],
+      comparisonColumns: ["name"],
       rows: [leftRow],
     }
     const rightTable = { name: "right", rows: [] }
@@ -23,19 +29,26 @@ describe("Bi-directional sync", () => {
 
     const result: SyncResult = Sync(payload)
 
-    const { id, ...rowWithoutId } = leftRow
+    const rowWithoutId = { name: "Tolumi", createdAt: now, updatedAt: now }
+
     expect(result.rowsToAddToRight).toEqual([rowWithoutId])
   })
 
   it("should add missing right table rows to the left table", async () => {
-    const rightRow: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
+    const now = new Date()
+    const rightRow: Row = [
+      { column: 'id', value: 1 },
+      { column: 'name', value: "Tolumi" },
+      { column: 'createdAt', value: now },
+      { column: 'updatedAt', value: now }
+    ]
     const leftTable = {
       name: "left",
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      comparisonColumns: ["anotherColumn"],
+      comparisonColumns: ["name"],
       rows: [],
     }
     const rightTable = { name: "right", rows: [rightRow] }
@@ -47,14 +60,19 @@ describe("Bi-directional sync", () => {
 
     const result: SyncResult = Sync(payload)
 
-    const { id, ...rowWithoutId } = rightRow
+    const rowWithoutId = { name: "Tolumi", createdAt: now, updatedAt: now }
     expect(result.rowsToAddToLeft).toEqual([rowWithoutId])
   })
 
   it("should delete rows from right table that are deleted in the left table", async () => {
     const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
-    const leftTableRow: Row = { id: 1, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
-    const rightRow: Row = { id: 5, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday }
+    const now = new Date()
+    const leftTableRow: Row = [
+      { column: 'id', value: 1 }, { column: 'name', value: "Tolumi" }, { column: 'createdAt', value: yesterday }, { column: 'updatedAt', value: yesterday }, { column: 'deletedAt', value: now }
+    ]
+    const rightRow: Row = [
+      { column: 'id', value: 5 }, { column: 'name', value: "Tolumi" }, { column: 'createdAt', value: yesterday }, { column: 'updatedAt', value: yesterday }
+    ]
 
     const leftTable = {
       name: "left",
@@ -62,7 +80,7 @@ describe("Bi-directional sync", () => {
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      comparisonColumns: ["anotherColumn"],
+      comparisonColumns: ["name"],
       rows: [leftTableRow],
     }
     const rightTable = { name: "right", rows: [rightRow] }
@@ -78,14 +96,16 @@ describe("Bi-directional sync", () => {
   })
 
   it("should not delete rows from right table that are not deleted in the left table", async () => {
-    const row: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
+    const now = new Date()
+    const row: Row = [
+      { column: 'id', value: 1 }, { column: 'name', value: "Tolumi" }, { column: 'createdAt', value: now }, { column: 'updatedAt', value: now }]
     const leftTable = {
       name: "left",
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      comparisonColumns: ["anotherColumn"],
+      comparisonColumns: ["name"],
       rows: [],
     }
     const rightTable = { name: "right", rows: [row] }
@@ -102,15 +122,16 @@ describe("Bi-directional sync", () => {
 
   it("should delete rows from left table that are deleted in the right table", async () => {
     const yesterday = DateTime.now().minus({ days: 1 }).toJSDate()
-    const leftTableRow: Row = { id: 6, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday }
-    const rightTableRow: Row = { id: 1, name: "Tolumi", createdAt: yesterday, updatedAt: yesterday, deletedAt: new Date() }
+    const now = new Date()
+    const leftTableRow: Row = [{ column: 'id', value: 6 }, { column: 'name', value: "Tolumi" }, { column: 'createdAt', value: yesterday }, { column: 'updatedAt', value: yesterday }]
+    const rightTableRow: Row = [{ column: 'id', value: 1 }, { column: 'name', value: "Tolumi" }, { column: 'createdAt', value: yesterday }, { column: 'updatedAt', value: yesterday }, { column: 'deletedAt', value: now }]
     const leftTable = {
       name: "left",
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      comparisonColumns: ["anotherColumn"],
+      comparisonColumns: ["name"],
       rows: [leftTableRow],
     }
     const rightTable = { name: "right", rows: [rightTableRow] }
@@ -126,20 +147,28 @@ describe("Bi-directional sync", () => {
   })
 
   it("should update rows in right table that are updated in the left table", async () => {
-    const luxonNow = DateTime.now()
-    const luxonNowMinusOneDay = luxonNow.minus({ days: 1 })
-    const oldRow: Row = { name: "Tolumi", playful: "no", updatedAt: luxonNowMinusOneDay.toString() }
-    const newRow: Row = { ...oldRow, playful: "yes", updatedAt: luxonNow.toString() }
+    const now = DateTime.fromObject({ year: 1992, month: 5, day: 8 })
+    const luxonNowMinusOneDay = DateTime.fromObject({ year: 1992, month: 5, day: 7 })
+    const rightRow: Row = [
+      { column: 'name', value: "Tolumi" },
+      { column: 'playful', value: "no" },
+      { column: 'updatedAt', value: luxonNowMinusOneDay.toString() }
+    ]
+    const leftRow: Row = [
+      { column: 'name', value: "Tolumi" },
+      { column: 'playful', value: "yes" },
+      { column: 'updatedAt', value: now.toString() }
+    ]
     const leftTable: LeftTable = {
       name: "left",
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      comparisonColumns: ["anotherColumn"],
-      rows: [newRow],
+      comparisonColumns: ["name"],
+      rows: [leftRow],
     }
-    const rightTable = { name: "right", rows: [oldRow] }
+    const rightTable = { name: "right", rows: [rightRow] }
 
     const payload: SyncPayload = {
       leftTable,
@@ -148,22 +177,28 @@ describe("Bi-directional sync", () => {
 
     const result: SyncResult = Sync(payload)
 
-    expect(result.rowsToUpdateOnRight).toEqual([newRow])
+    expect(result.rowsToUpdateOnRight).toEqual([{
+      name: "Tolumi",
+      playful: "yes",
+      updatedAt: now.toString(),
+    }])
   })
 
   it("should update rows in left table that are updated in the right table", async () => {
-    const row: Row = { name: "Tolumi", updatedAt: new Date(2023, 6, 1) }
-    const oldRow: Row = { ...row, updatedAt: new Date(2023, 5, 30) }
+    const present = DateTime.fromObject({ year: 1992, month: 5, day: 8 })
+    const past = DateTime.fromObject({ year: 1992, month: 5, day: 7 })
+    const rightRow: Row = [{ column: 'name', value: "Tolumi" }, { column: 'updatedAt', value: present.toString() }]
+    const leftRow: Row = [{ column: 'name', value: "Tolumi" }, { column: 'updatedAt', value: past.toString() }]
     const leftTable = {
       name: "left",
       primaryKey: "id",
       createdAt: "createdAt",
       updatedAt: "updatedAt",
       deletedAt: "deletedAt",
-      comparisonColumns: ["anotherColumn"],
-      rows: [oldRow],
+      comparisonColumns: ["name"],
+      rows: [leftRow],
     }
-    const rightTable = { name: "right", rows: [row] }
+    const rightTable = { name: "right", rows: [rightRow] }
 
     const payload: SyncPayload = {
       leftTable,
@@ -172,11 +207,15 @@ describe("Bi-directional sync", () => {
 
     const result: SyncResult = Sync(payload)
 
-    expect(result.rowsToUpdateOnLeft).toEqual([row])
+    expect(result.rowsToUpdateOnLeft).toEqual([{
+      name: "Tolumi",
+      updatedAt: present.toString(),
+    }])
   })
 
   it("can use map to get corresponding column names in the right table", async () => {
-    const leftRow: Row = { id: 1, name: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
+    const now = new Date()
+    const leftRow: Row = [{ column: 'id', value: 1 }, { column: 'name', value: "Tolumi" }, { column: 'createdAt', value: now }, { column: 'updatedAt', value: now }]
     const leftTable = {
       name: "left",
       primaryKey: "id",
@@ -196,8 +235,9 @@ describe("Bi-directional sync", () => {
 
     const result: SyncResult = Sync(payload)
 
-    const rightRow: Row = { name_in_right_table: "Tolumi", createdAt: new Date(), updatedAt: new Date() }
-
-    expect(result.rowsToAddToRight).toEqual([rightRow])
+    expect(result.rowsToAddToRight).toEqual([{
+      name_in_right_table: "Tolumi",
+      createdAt: now, updatedAt: now
+    }])
   })
 })

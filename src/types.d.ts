@@ -1,32 +1,48 @@
 import { Sequelize } from "sequelize"
 
-/**
- * This is a key-value pair of column names and their corresponding values, including
- * the primary key column.
- */
-export type Row = { [column: string]: any }
+export type Row = Cell[]
+
+export type Cell = {
+  column: string,
+  value: CellValue
+  /**
+   * If this column is normalised and instead references value in another
+   * table and only hold the id for the target parent row, then the real
+   * denormalised value should be specified here
+   */
+  denormalisedValue?: string | number
+}
+
+type CellValue = CellValue
 
 /**
  * This is a key-value pair of column names and their corresponding values, but
  * without the primary key column.
  */
-export type RowWithoutPrimaryKey = { [column: string]: any }
+export type RowWithoutPrimaryKey = { [column: string]: CellValue }
 
-export type PrimaryKey = any
-
-export type RightTable = {
-  name: string
-  rows: Row[]
-}
+export type PrimaryKey = string | number
 
 export interface SyncPayload {
   leftTable: LeftTable
   rightTable: RightTable
 }
 
-export type LeftTable = {
+type Table = {
   name: string
+  rows: Row[]
+  /**
+   * The columns that are foreign keys in this table
+   */
+  foreignKeyColumns?: string[]
+  /**
+ * The columns on this table that are references to values in another table
+ * should be indicated here, together with their corresponding possible values
+ */
+  denormalisationDetails?: DenormalisationDetail[]
+}
 
+export interface LeftTable extends Table {
   /**
    * The name of the primary key column in the left table.
    */
@@ -62,8 +78,29 @@ export type LeftTable = {
    * You can simply include only the columns that are different.
    */
   mapToRightColumn?: Record<string, string>
+}
 
-  rows: Row[]
+export interface RightTable extends Table {
+}
+
+/**
+ * Details on how a normalized column can de denormalised
+ */
+export type DenormalisationDetail = {
+  column: string
+  denormalisationMap: DenormalisationMap[]
+}
+
+export type DenormalisationMap = {
+  /**
+   * This is usually numeric, e.g. the 'id' value -- the value
+   * that will be used for this column in a typical data normalisation
+   */
+  normalisedColumnValue: string | number
+  /**
+   * This is the value that will be used for this column in a typical data denormalisation
+   */
+  denormalisedColumnValue: string | number
 }
 
 export interface SyncResult {

@@ -1,5 +1,5 @@
 import { Sequelize } from "sequelize"
-import { SyncResult, Row, SyncPayload, LeftTable, RightTable } from "./types"
+import { SyncResult, Row, SyncPayload, LeftTable, RightTable, DenormalisationDetail, Cell, RowWithoutPrimaryKey, DenormalisationMap } from "./types"
 import { updateLastSyncTime } from "./logger"
 
 export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {
@@ -23,58 +23,82 @@ export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {
 
   leftTable.rows.forEach((leftTableRow: Row) => {
     const matchedRightTableRow: Row | undefined = getCorrespondingRowFromRightTable(rightTable, leftTable, leftTableRow)
+    const leftNonPrimaryKeyCells: Cell[] = leftTableRow.filter((cell: Cell) => cell.column !== leftTable.primaryKey)
 
     if (!matchedRightTableRow) {
-      const { [leftTable.primaryKey]: id, ...leftWithoutPrimaryKey } = leftTableRow
-      const mappedRightTableRow = getRightRowMappedFromLeftRow(leftWithoutPrimaryKey, leftTable)
+      const mappedRightTableRow = getRightRowMappedFromLeftRow(leftNonPrimaryKeyCells, leftTable, rightTable)
       return result.rowsToAddToRight.push(mappedRightTableRow)
     }
 
     // If the row was deleted on the left table, and the right table row is not deleted, and the
     // right table row was not updated after the left table row was deleted, delete the right table row.
-    const leftTableRowWasDeleted = leftTableRow[leftTable.deletedAt]
-    const rightTableRowWasNotDeleted = !matchedRightTableRow[rightTableDeletedAtColumn]
-    const rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted = matchedRightTableRow[rightTableUpdatedAtColumn] < leftTableRow[leftTable.deletedAt]
-    const shouldDeleteRightTableRow = leftTableRowWasDeleted && rightTableRowWasNotDeleted && rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted
+    const leftTableRowDeletedAt = leftTableRow.find(cell => cell.column === leftTable.deletedAt)?.value
+    const leftTableRowWasDeleted = Boolean(leftTableRowDeletedAt)
+    const rightTableRowDeletedAt = matchedRightTableRow.find(cell => cell.column === rightTableDeletedAtColumn)?.value
+    const leftTableLastUpdate = leftTableRow.find(cell => cell.column === leftTable.updatedAt)?.value
+    const rightTableLastUpdate = matchedRightTableRow.find(cell => cell.column === rightTableUpdatedAtColumn)?.value
+
+    if (!rightTableLastUpdate) {
+      throw new Error('Last update timestamp for right table not found')
+    }
+
+    const rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted = rightTableLastUpdate < (leftTableRowDeletedAt as string)
+    const shouldDeleteRightTableRow = leftTableRowWasDeleted && !rightTableRowDeletedAt && rightTableRowWasNotUpdatedAfterLeftTableRowWasDeleted
 
     if (shouldDeleteRightTableRow) {
-      const primaryKeyToDelete = matchedRightTableRow[primaryKeyColumnRightTable]
-      return result.toDeleteFromRight.push(primaryKeyToDelete)
+      const primaryKeyToDelete = matchedRightTableRow.find(cell => cell.column === primaryKeyColumnRightTable)
+
+      if (!primaryKeyToDelete) {
+        throw new Error('Primary key column was found on the left table but not defined on the right table');
+      }
+
+      if (!primaryKeyToDelete.value) {
+        throw new Error('Primary key column was found but does not have a value');
+      }
+
+      return result.toDeleteFromRight.push(primaryKeyToDelete?.value as string | number)
     }
 
     // If the row was deleted on the right table, and the left table row is not deleted, and the
     // left table row was not updated after the right table row was deleted, delete the left table row.
-    const rightTableRowWasDeleted = matchedRightTableRow[rightTableDeletedAtColumn]
-    const leftTableRowWasNotDeleted = !leftTableRow[leftTable.deletedAt]
-    const leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted = leftTableRow[leftTable.updatedAt] < matchedRightTableRow[rightTableDeletedAtColumn]
-    const shouldDeleteLeftTableRow = rightTableRowWasDeleted && leftTableRowWasNotDeleted && leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted
+    const rightTableRowWasDeleted = Boolean(rightTableRowDeletedAt)
+    const leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted = !leftTableLastUpdate || leftTableLastUpdate < (rightTableRowDeletedAt as string)
+    const shouldDeleteLeftTableRow = rightTableRowWasDeleted && !leftTableRowDeletedAt && leftTableRowWasNotUpdatedAfterRightTableRowWasDeleted
 
     if (shouldDeleteLeftTableRow) {
-      const primaryKeyToDelete = leftTableRow[leftTable.primaryKey]
-      return result.toDeleteFromLeft.push(primaryKeyToDelete)
+      const primaryKeyToDelete = leftTableRow.find(cell => cell.column === leftTable.primaryKey)
+
+      if (!primaryKeyToDelete) {
+        throw new Error('The primary key column was not found on the left table')
+      }
+
+      if (!primaryKeyToDelete.value) {
+        throw new Error('Primary key column was found but does not have a value');
+      }
+
+      return result.toDeleteFromLeft.push(primaryKeyToDelete.value)
     }
 
     // If the row was updated on the left table, and the right table row is not deleted, and the
     // right table row was not updated after the left table row was updated, update the right table row.
-    const leftTableRowWasUpdated = leftTableRow[leftTable.updatedAt] > matchedRightTableRow[rightTableUpdatedAtColumn]
-    const rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated = matchedRightTableRow[rightTableUpdatedAtColumn] < leftTableRow[leftTable.updatedAt]
-    const updateOnRight = leftTableRowWasUpdated && rightTableRowWasNotDeleted && rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated
+    const leftTableRowWasUpdated = leftTableLastUpdate && leftTableLastUpdate > rightTableLastUpdate
+    const rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated = !leftTableLastUpdate || rightTableLastUpdate < leftTableLastUpdate
+    const updateOnRight = leftTableRowWasUpdated && !rightTableRowDeletedAt && rightTableRowWasNotUpdatedAfterLeftTableRowWasUpdated
 
     if (updateOnRight) {
-      const { [leftTable.primaryKey]: id, ...leftWithoutPrimaryKey } = leftTableRow
-      const mappedRightTableRow = getRightRowMappedFromLeftRow(leftWithoutPrimaryKey, leftTable)
+      const mappedRightTableRow = getRightRowMappedFromLeftRow(leftNonPrimaryKeyCells, leftTable, rightTable)
       return result.rowsToUpdateOnRight.push(mappedRightTableRow)
     }
 
     // If the row was updated on the right table, and the left table row is not deleted, and the
     // left table row was not updated after the right table row was updated, update the left table row.
-    const rightTableRowWasUpdated = matchedRightTableRow[rightTableUpdatedAtColumn] > leftTableRow[leftTable.updatedAt]
-    const leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated = leftTableRow[leftTable.updatedAt] < matchedRightTableRow[rightTableUpdatedAtColumn]
-    const updateOnLeft = rightTableRowWasUpdated && leftTableRowWasNotDeleted && leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated
+    const rightTableRowWasUpdated = (rightTableLastUpdate && leftTableLastUpdate) && rightTableLastUpdate > leftTableLastUpdate
+    const leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated = leftTableLastUpdate && (leftTableLastUpdate < rightTableLastUpdate)
+    const updateOnLeft = rightTableRowWasUpdated && !leftTableRowDeletedAt && leftTableRowWasNotUpdatedAfterRightTableRowWasUpdated
 
     if (updateOnLeft) {
-      const { [primaryKeyColumnRightTable]: id, ...rightRowWithoutIdColumn } = matchedRightTableRow
-      const mappedRow = getLeftRowMappedFromRightRow(rightRowWithoutIdColumn, leftTable)
+      const rightNonPrimaryKeyCells: Cell[] = matchedRightTableRow.filter((cell: Cell) => cell.column !== primaryKeyColumnRightTable)
+      const mappedRow = getLeftRowMappedFromRightRow(rightNonPrimaryKeyCells, leftTable, rightTable)
       return result.rowsToUpdateOnLeft.push(mappedRow)
     }
   })
@@ -85,8 +109,8 @@ export function Sync({ leftTable, rightTable }: SyncPayload): SyncResult {
     })
 
     if (!leftTableRow) {
-      const { [primaryKeyColumnRightTable]: id, ...rowWithoutIdColumn } = rightTableRow
-      const mappedRow = getLeftRowMappedFromRightRow(rowWithoutIdColumn, leftTable)
+      const rightNonPrimaryKeyCells: Cell[] = rightTableRow.filter((cell: Cell) => cell.column !== primaryKeyColumnRightTable)
+      const mappedRow = getLeftRowMappedFromRightRow(rightNonPrimaryKeyCells, leftTable, rightTable)
       return result.rowsToAddToLeft.push(mappedRow)
     }
   })
@@ -102,8 +126,9 @@ function getCorrespondingRowFromRightTable(rightTable: RightTable, leftTable: Le
 
 function leftMatchesRight(leftTable: LeftTable, leftTableRow: Row, rightTableRow: Row): boolean {
   return leftTable.comparisonColumns.every(column => {
-    const rightValue = rightTableRow[getRightColumnNameFromLeft(column, leftTable.mapToRightColumn)]
-    const leftValue = leftTableRow[column]
+    const rightColumnName = getRightColumnNameFromLeft(column, leftTable.mapToRightColumn)
+    const rightValue = rightTableRow.find(cell => cell.column === rightColumnName)?.value
+    const leftValue = leftTableRow.find(cell => cell.column === column)?.value
     return leftValue === rightValue
   })
 }
@@ -113,8 +138,9 @@ function leftMatchesRight(leftTable: LeftTable, leftTableRow: Row, rightTableRow
  */
 function rowAreSame(leftTableRow: Row, rightTableRow: Row, leftTable: LeftTable): boolean {
   return leftTable.comparisonColumns.every(column => {
-    const leftValue = leftTableRow[column]
-    const rightValue = rightTableRow[getRightColumnNameFromLeft(column, leftTable.mapToRightColumn)]
+    const leftValue = leftTableRow.find(cell => cell.column === column)?.value
+    const rightColumnName = getRightColumnNameFromLeft(column, leftTable.mapToRightColumn)
+    const rightValue = rightTableRow.find(cell => cell.column === rightColumnName)?.value
     return leftValue === rightValue
   })
 }
@@ -134,24 +160,23 @@ export function getRightColumnNameFromLeft(leftColumn: string, leftColumnsMapToR
 /**
  * Returns the left table row with the column names mapped to the right table column names.
  */
-function getLeftRowMappedFromRightRow(rightRow: Row, leftTable: LeftTable) {
-  const mappedLeftTableRow: Row = {}
-
-  Object.entries(rightRow).forEach(([columnName, value]) => {
-    const leftColumn = getLeftColumnNameFromRight(columnName, leftTable)
-    mappedLeftTableRow[leftColumn] = value
-  })
+function getLeftRowMappedFromRightRow(rightRowCells: Cell[], leftTable: LeftTable, rightTable: RightTable): RowWithoutPrimaryKey {
+  const mappedLeftTableRow: RowWithoutPrimaryKey = {}
+  for (const cell of rightRowCells) {
+    const leftColumn = getLeftColumnNameFromRight(cell.column, leftTable)
+    mappedLeftTableRow[leftColumn] = getRealValueForLeftRowFrom(cell, leftTable, rightTable)
+  }
 
   return mappedLeftTableRow
 }
 
-function getRightRowMappedFromLeftRow(leftRow: Row, leftTable: LeftTable) {
-  const mappedRightTableRow: Row = {}
+function getRightRowMappedFromLeftRow(leftRowCells: Cell[], leftTable: LeftTable, rightTable: RightTable): RowWithoutPrimaryKey {
+  const mappedRightTableRow: RowWithoutPrimaryKey = {}
 
-  Object.entries(leftRow).forEach(([columnName, value]) => {
-    const rightColumn = getRightColumnNameFromLeft(columnName, leftTable.mapToRightColumn)
-    mappedRightTableRow[rightColumn] = value
-  })
+  for (const cell of leftRowCells) {
+    const rightColumn = getRightColumnNameFromLeft(cell.column, leftTable.mapToRightColumn)
+    mappedRightTableRow[rightColumn] = getRealValueForRightRowFrom(cell, leftTable, rightTable)
+  }
 
   return mappedRightTableRow
 }
@@ -172,4 +197,66 @@ export function getLeftColumnNameFromRight(rightColumn: string, leftTable: LeftT
   }
 
   return rightColumn
+}
+
+function getRealValueForRightRowFrom(leftCell: Cell, leftTable: LeftTable, rightTable: RightTable): any {
+  const isForeignKeyColumn = leftTable.foreignKeyColumns?.includes(leftCell.column)
+
+  if (!isForeignKeyColumn) {
+    return leftCell.value
+  }
+
+  if (!rightTable.denormalisationDetails) {
+    throw new Error('Right table does not provide denormalisation details')
+  }
+
+  const rightTableColumn = getRightColumnNameFromLeft(leftCell.column, leftTable.mapToRightColumn)
+  const rightTableDenormalisationDetail: DenormalisationDetail | undefined = rightTable.denormalisationDetails.find(nonNormal => nonNormal.column === rightTableColumn)
+
+  if (!rightTableDenormalisationDetail) {
+    const message = `Left table has a foreign key column '${leftCell.column}' which in the right table is the '${rightTableColumn}' column, but the right table
+    does not provide denormalisation details for '${rightTableColumn}'`;
+    throw new Error(message)
+  }
+
+  const denormalisedValue: DenormalisationMap | undefined = rightTableDenormalisationDetail.denormalisationMap.find(nonNormal => nonNormal.normalisedColumnValue === leftCell.denormalisedValue)
+
+  if (!denormalisedValue) {
+    const message = `Left table has a foreign key column '${leftCell.column}' which in the right table is the '${rightTableColumn}' column, but the right table
+    does not provide denormalisation details for '${rightTableColumn}' with the value '${leftCell.denormalisedValue}'`;
+    throw new Error(message)
+  }
+
+  return denormalisedValue.normalisedColumnValue
+}
+
+function getRealValueForLeftRowFrom(rightCell: Cell, leftTable: LeftTable, rightTable: RightTable): any {
+  const isForeignKeyColumn = rightTable.foreignKeyColumns?.includes(rightCell.column)
+
+  if (!isForeignKeyColumn) {
+    return rightCell.value
+  }
+
+  if (!leftTable.denormalisationDetails) {
+    throw new Error('Left table does not provide denormalisation details')
+  }
+
+  const leftTableColumn = getLeftColumnNameFromRight(rightCell.column, leftTable)
+  const leftTableDenormalisationDetail: DenormalisationDetail | undefined = leftTable.denormalisationDetails.find(nonNormal => nonNormal.column === leftTableColumn)
+
+  if (!leftTableDenormalisationDetail) {
+    const message = `Right table has a foreign key column '${rightCell.column}' which in the left table is the '${leftTableColumn}' column, but the left table
+    does not provide denormalisation details for '${leftTableColumn}'`;
+    throw new Error(message)
+  }
+
+  const denormalisedValue: DenormalisationMap | undefined = leftTableDenormalisationDetail.denormalisationMap.find(nonNormal => nonNormal.normalisedColumnValue === rightCell.denormalisedValue)
+
+  if (!denormalisedValue) {
+    const message = `Right table has a foreign key column '${rightCell.column}' which in the left table is the '${leftTableColumn}' column, but the left table
+    does not provide denormalisation details for '${leftTableColumn}' with the value '${rightCell.denormalisedValue}'`;
+    throw new Error(message)
+  }
+
+  return denormalisedValue.normalisedColumnValue
 }

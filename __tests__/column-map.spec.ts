@@ -1,5 +1,5 @@
 import * as _module from "../src/bi-directional-sync"
-import { LeftTable, Row, SyncPayload, SyncResult } from "../src/types"
+import { LeftTable, Row, RowWithoutPrimaryKey, SyncPayload, SyncResult } from "../src/types"
 
 describe("Column map", () => {
 
@@ -23,6 +23,7 @@ describe("Column map", () => {
       comparisonColumns: [],
       mapToRightColumn: leftColumnsMapToRightColumn,
       rows: [],
+      foreignKeyColumns: [],
     }
 
     expect(_module.getLeftColumnNameFromRight("unique1R", leftTable)).toEqual("unique1")
@@ -37,7 +38,12 @@ describe("Column map", () => {
   })
 
   it("should map left columns to right columns when adding missing left table rows to the right table", async () => {
-    const leftRow: Row = { id: 1, name: "Tolumi", createdAt: new Date(now), updatedAt: new Date(now) }
+    const leftRow: Row = [
+      { column: 'id', value: 1 },
+      { column: 'name', value: "Tolumi" },
+      { column: 'createdAt', value: new Date(now) },
+      { column: 'updatedAt', value: new Date(now) }
+    ]
     const leftTable = {
       name: "left",
       primaryKey: "id",
@@ -57,13 +63,22 @@ describe("Column map", () => {
 
     const result: SyncResult = _module.Sync(payload)
 
-    const rightRow: Row = { name_in_right_table: "Tolumi", createdAt: new Date(now), updatedAt: new Date(now) }
+    const rightRow: RowWithoutPrimaryKey = {
+      name_in_right_table: "Tolumi",
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    }
 
     expect(result.rowsToAddToRight).toStrictEqual([rightRow])
   })
 
   it("should map right columns to left columns when adding missing right table rows to the left table", async () => {
-    const rightRow: Row = { id: 1, name_in_right_table: "Tolumi", createdAt: new Date(now), updatedAt: new Date(now) } // Use right column "name_in_right_table" instead of left column "name"
+    const rightRow: Row = [
+      { column: 'id', value: 1 },
+      { column: 'name_in_right_table', value: "Tolumi" },
+      { column: 'createdAt', value: new Date(now) },
+      { column: 'updatedAt', value: new Date(now) }
+    ]
     const leftTable = {
       name: "left",
       primaryKey: "id",
@@ -83,7 +98,11 @@ describe("Column map", () => {
 
     const result: SyncResult = _module.Sync(payload)
 
-    const leftRow: Row = { name: "Tolumi", createdAt: new Date(now), updatedAt: new Date(now) }
+    const leftRow: RowWithoutPrimaryKey = {
+      name: "Tolumi",
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    }
 
     expect(result.rowsToAddToLeft).toStrictEqual([leftRow])
   })

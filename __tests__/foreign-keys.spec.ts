@@ -2,7 +2,7 @@ import { Sync } from "../src/sync"
 import { Row, SyncPayload, SyncResult, LeftTable, RightTable } from "../src/types"
 
 describe("Sync", () => {
-  it("should correctly sync rows with matching foreign keys in both tables", async () => {
+  it("should correctly sync rows with matching foreign keys in both tables", () => {
     const now = new Date()
     const leftRow: Row = [
       { column: 'id', value: 1 },
@@ -51,7 +51,7 @@ describe("Sync", () => {
     expect(result.toDeleteFromLeft).toEqual([])
   })
 
-  it("should resolve conflicts by updating foreign keys based on last update times", async () => {
+  it("should resolve conflicts by updating foreign keys based on last update times", () => {
     const earlierTime = new Date('2023-10-01T12:00:00Z');
     const laterTime = new Date('2023-10-01T13:00:00Z');
 
@@ -117,7 +117,7 @@ describe("Sync", () => {
     expect(result.rowsToUpdateOnLeft).toEqual([rowWithoutId])
   })
 
-  it("should handle conflicts when foreign keys in left table do not match with right table", async () => {
+  it("should handle conflicts when foreign keys in left table do not match with right table", () => {
     const now = new Date("2023-10-01T12:00:00Z");
     const later = new Date("2023-10-01T13:00:00Z");
 
@@ -178,7 +178,7 @@ describe("Sync", () => {
     expect(result.rowsToAddToRight).toEqual([rowWithoutId]);
   })
 
-  it("should handle conflicts when foreign keys in right table do not match with left table", async () => {
+  it("should handle conflicts when foreign keys in right table do not match with left table", () => {
     const now = new Date("2023-10-01T12:00:00Z");
 
     const rightRow: Row = [
@@ -244,7 +244,7 @@ describe("Sync", () => {
     expect(result.rowsToAddToLeft).toEqual([rowWithoutId]);
   })
 
-  it('should throw an error when right table does not provide denormalisation details', async () => {
+  it('should throw an error when right table does not provide denormalisation details', () => {
     // Simulate a left table with a row having a foreign key
     const leftTable: LeftTable = {
       name: 'leftTable',
@@ -284,7 +284,7 @@ describe("Sync", () => {
     expect(() => Sync({ leftTable, rightTable })).toThrow('Right table does not provide denormalisation details');
   })
 
-  it('should throw an error when left table does not provide denormalisation details', async () => {
+  it('should throw an error when left table does not provide denormalisation details', () => {
     // Simulate a left table with no rows and no denormalisationDetails
     const leftTable: LeftTable = {
       name: 'leftTable',
@@ -324,7 +324,7 @@ describe("Sync", () => {
     expect(() => Sync({ leftTable, rightTable })).toThrow('Left table does not provide denormalisation details');
   })
 
-  it('should correctly map and sync foreign key columns with different names in left and right tables', async () => {
+  it('should correctly map and sync foreign key columns with different names in left and right tables', () => {
     // Define left table with a foreign key column named differently than in the right table
     const leftTable: LeftTable = {
       name: 'leftTable',
@@ -356,7 +356,7 @@ describe("Sync", () => {
     };
 
     // Perform sync operation
-    const syncResult = await Sync({ leftTable, rightTable });
+    const syncResult = Sync({ leftTable, rightTable });
 
     // Assert that the rows are correctly synced despite the different foreign key column names
     expect(syncResult.rowsToAddToRight).toEqual([{ name: 'John', squadId: 1 }]);

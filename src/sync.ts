@@ -163,6 +163,9 @@ export function getRightColumnNameFromLeft(leftColumn: string, leftColumnsMapToR
 function getLeftRowMappedFromRightRow(rightRowCells: Cell[], leftTable: LeftTable, rightTable: RightTable): RowWithoutPrimaryKey {
   const mappedLeftTableRow: RowWithoutPrimaryKey = {}
   for (const cell of rightRowCells) {
+    if (rightTable.excludedColumns?.includes(cell.column)) {
+      continue
+    }
     const leftColumn = getLeftColumnNameFromRight(cell.column, leftTable)
     mappedLeftTableRow[leftColumn] = getRealValueForLeftRowFrom(cell, leftTable, rightTable)
   }
@@ -174,6 +177,9 @@ function getRightRowMappedFromLeftRow(leftRowCells: Cell[], leftTable: LeftTable
   const mappedRightTableRow: RowWithoutPrimaryKey = {}
 
   for (const cell of leftRowCells) {
+    if (leftTable.excludedColumns?.includes(cell.column)) {
+      continue
+    }
     const rightColumn = getRightColumnNameFromLeft(cell.column, leftTable.mapToRightColumn)
     mappedRightTableRow[rightColumn] = getRealValueForRightRowFrom(cell, leftTable, rightTable)
   }

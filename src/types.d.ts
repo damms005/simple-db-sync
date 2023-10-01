@@ -40,6 +40,12 @@ type Table = {
  * should be indicated here, together with their corresponding possible values
  */
   denormalisationDetails?: DenormalisationDetail[]
+
+  /**
+   * Columns to exclude from the sync operation. This is useful if you have
+   * columns that are not needed in the other table.
+   */
+  excludedColumns?: string[]
 }
 
 export interface LeftTable extends Table {

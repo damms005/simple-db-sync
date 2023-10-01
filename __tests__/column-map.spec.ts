@@ -1,4 +1,4 @@
-import * as _module from "../src/bi-directional-sync"
+import * as _module from "../src/sync"
 import { LeftTable, Row, RowWithoutPrimaryKey, SyncPayload, SyncResult } from "../src/types"
 
 describe("Column map", () => {

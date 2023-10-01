@@ -1,8 +1,8 @@
-import { Sync } from "../src/bi-directional-sync"
+import { Sync } from "../src/sync"
 import { DateTime } from "luxon"
 import { Row, SyncPayload, SyncResult, LeftTable } from "../src/types"
 
-describe("Bi-directional sync", () => {
+describe("Sync", () => {
   it("should add missing left table rows to the right table", async () => {
     const now = new Date()
     const leftRow: Row = [

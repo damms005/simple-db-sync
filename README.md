@@ -1,6 +1,6 @@
 # Simple DB Sync
 
-Perform bi-directional synchronization between two database tables, even when column names differ.
+Perform data synchronization between two database tables, even when column names differ.
 
 > **Note:**
 > This package is intended for scenarios where traditional database synchronization methods like master-slave replications or writes forwarding are not suitable. Please consider those alternatives before using this package. See below for typical use-cases.

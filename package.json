@@ -4,8 +4,8 @@
   },
   "name": "simple-db-sync",
   "version": "1.0.6",
-  "main": "dist/bi-directional-sync.js",
-  "types": "dist/bi-directional-sync.d.ts",
+  "main": "dist/sync.js",
+  "types": "dist/sync.d.ts",
   "files": [
     "dist",
     "README.md"

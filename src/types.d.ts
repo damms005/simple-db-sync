@@ -13,7 +13,7 @@ export type Cell = {
   denormalisedValue?: string | number
 }
 
-type CellValue = CellValue
+type CellValue = string | number | boolean | null
 
 /**
  * This is a key-value pair of column names and their corresponding values, but

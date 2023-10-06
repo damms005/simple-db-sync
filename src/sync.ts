@@ -138,11 +138,29 @@ function leftMatchesRight(leftTable: LeftTable, leftTableRow: Row, rightTableRow
  */
 function rowAreSame(leftTableRow: Row, rightTableRow: Row, leftTable: LeftTable): boolean {
   return leftTable.comparisonColumns.every(column => {
-    const leftValue = leftTableRow.find(cell => cell.column === column)?.value
+    const leftCell = leftTableRow.find(cell => cell.column === column)
+    if (!leftCell) {
+      throw new Error(`Column '${column}' was not found on the left table`)
+    }
+
     const rightColumnName = getRightColumnNameFromLeft(column, leftTable.mapToRightColumn)
-    const rightValue = rightTableRow.find(cell => cell.column === rightColumnName)?.value
-    return leftValue === rightValue
+    const rightCell = rightTableRow.find(cell => cell.column === rightColumnName)
+
+    if (!rightCell) {
+      throw new Error(`Column '${rightColumnName}' was not found on the right table`)
+    }
+
+    const isForeignKeyColumn = leftTable.foreignKeyColumns?.includes(leftCell.column)
+    if (isForeignKeyColumn) {
+      return resolveSimilarityOfForeignKeyColumns(leftCell, rightCell, leftTableRow, rightTableRow, leftTable)
+    }
+
+    return leftCell.value === rightCell.value
   })
+}
+
+function resolveSimilarityOfForeignKeyColumns(leftCell: Cell, rightCell: Cell, leftTable: LeftTable, rightTable: RightTable) {
+  const realValueRightCell = getRealValueForRightRowFrom(rightCell, leftTable, rightTable)
 }
 
 /**
@@ -205,7 +223,12 @@ export function getLeftColumnNameFromRight(rightColumn: string, leftTable: LeftT
   return rightColumn
 }
 
-function getRealValueForRightRowFrom(leftCell: Cell, leftTable: LeftTable, rightTable: RightTable): any {
+/**
+ * Needed when the left cell is a foreign key column.
+ * Given a left cell, get the real normalized value for the right row.
+ * This real value is usually the 'id' value -- the value that will be used for this column in a typical data normalisation
+ */
+function getRealValueForRightRowFrom(leftCell: Cell, leftTable: LeftTable, rightTable: RightTable): string | number {
   const isForeignKeyColumn = leftTable.foreignKeyColumns?.includes(leftCell.column)
 
   if (!isForeignKeyColumn) {
@@ -236,7 +259,43 @@ function getRealValueForRightRowFrom(leftCell: Cell, leftTable: LeftTable, right
   return denormalisedValue.normalisedColumnValue
 }
 
-function getRealValueForLeftRowFrom(rightCell: Cell, leftTable: LeftTable, rightTable: RightTable): any {
+function getDenormalisedValueForRightRowFrom(leftCell: Cell, leftTable: LeftTable, rightTable: RightTable): DenormalisationMap {
+  const isForeignKeyColumn = leftTable.foreignKeyColumns?.includes(leftCell.column)
+
+  if (!isForeignKeyColumn) {
+    throw new Error('The left cell is not a foreign key column')
+  }
+
+  if (!rightTable.denormalisationDetails) {
+    throw new Error('Right table does not provide denormalisation details')
+  }
+
+  const rightTableColumn = getRightColumnNameFromLeft(leftCell.column, leftTable.mapToRightColumn)
+  const rightTableDenormalisationDetail: DenormalisationDetail | undefined = rightTable.denormalisationDetails.find(nonNormal => nonNormal.column === rightTableColumn)
+
+  if (!rightTableDenormalisationDetail) {
+    const message = `Left table has a foreign key column '${leftCell.column}' which in the right table is the '${rightTableColumn}' column, but the right table
+    does not provide denormalisation details for '${rightTableColumn}'`;
+    throw new Error(message)
+  }
+
+  const denormalisedValue: DenormalisationMap | undefined = rightTableDenormalisationDetail.denormalisationMap.find(nonNormal => nonNormal.denormalisedColumnValue === leftCell.denormalisedValue)
+
+  if (!denormalisedValue) {
+    const message = `Left table has a foreign key column '${leftCell.column}' which in the right table is the '${rightTableColumn}' column, but the right table
+    does not provide denormalisation details for '${rightTableColumn}' with the value '${leftCell.denormalisedValue}'`;
+    throw new Error(message)
+  }
+
+  return denormalisedValue
+}
+
+/**
+ * Needed when the right cell is a foreign key column.
+ * Given a right cell, get the real normalized value for the left row.
+ * This real value is usually the 'id' value -- the value that will be used for this column in a typical data normalisation
+ */
+function getRealValueForLeftRowFrom(rightCell: Cell, leftTable: LeftTable, rightTable: RightTable): string | number {
   const isForeignKeyColumn = rightTable.foreignKeyColumns?.includes(rightCell.column)
 
   if (!isForeignKeyColumn) {
